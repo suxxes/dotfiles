@@ -1,0 +1,45 @@
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+[user]
+	name = Fedor
+	email = 141334+suxxes@users.noreply.github.com
+# {{ if eq .osType "darwin" }}
+	signingkey = ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRNF5oalvPCBs3wmPeyQpeO+OYN/JXcpnICU13NmuDizfGLpK/ql+H+lNo4R78j8lZ26jgOOM3P0w/RY8nHlMoqWOlwVuixXmAL365/qShjI03S9t9pneWEMQtLLv2ItBGyhhy+p01+vEXT3vk5o3ZAF3aEKVjA8z6k6lG+IolsnIndXLRNjU6FkH+jz0hQZdZp/0nwAS2HKTFt34tqaBVG34aNQxt5z+kIjSRzykth/2bXwv4wqaaw+zcStZ+MYHXRkzLuXub3FHb9CMbPDavC5OUI9C1K9WMJfFnSu4nmfgZlOf5PUOyKFZI/dr7ZQ/vpUtOVAKPqixiPOQBIjc7
+# {{ else }}
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEUVDyBU9mPCnloZglUieNXZIqqs98w1UjG9XP6HQ+n/
+# {{ end }}
+[init]
+	defaultBranch = main
+[core]
+	excludesfile = ~/.gitignore
+	editor = nano
+	filemode = false
+	quotepath = false
+	autocrlf = input
+[diff]
+	colorMoved = default
+[merge]
+	conflictstyle = diff3
+[rerere]
+	enabled = true
+[fetch]
+	prune = true
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	required = true
+	process = git-lfs filter-process
+[pull]
+	rebase = false
+[gpg]
+	format = ssh
+[gpg "ssh"]
+# {{ if eq .osType "darwin" }}
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+# {{ end }}
+	allowedSignersFile = ~/.ssh/allowed_signers
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true
+[push]
+	autoSetupRemote = true

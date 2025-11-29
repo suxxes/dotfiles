@@ -7,4 +7,5 @@ LICENSE
 # {{ if ne .machineType "mac" }}
 .tmux.conf
 .tmux/
+.ssh/config
 # {{ end }}

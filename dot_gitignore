@@ -1,0 +1,52 @@
+# Editor directories and files
+.idea
+.vscode
+.zed
+.vim
+.viminfo
+*~
+*.swp
+*.swo
+
+# macOS system files
+.DS_Store
+.CFUserTextEncoding
+
+# Shell history and sessions
+.zsh_sessions/
+.lesshst
+.*_history
+
+# Package manager caches
+.npm/
+.cache/
+.yarn/
+.bun/
+.bundle/
+node_modules/
+
+# Secrets (safety net)
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
