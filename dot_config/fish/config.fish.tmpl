@@ -1,0 +1,17 @@
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Managed by chezmoi - do not edit directly
+
+set -gx EDITOR nano
+set -gx VISUAL nano
+set -gx LANG en_US.UTF-8
+set -gx LC_ALL en_US.UTF-8
+set -gx LANGUAGE C
+set -gx TERM xterm-256color
+
+# Machine: # {{ .machineType }}
+# Host: # {{ .hostname }}
+
+# Load conf.d scripts
+for conf in ~/.config/fish/conf.d/*.fish
+    source $conf
+end

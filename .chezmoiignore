@@ -1,0 +1,9 @@
+README.md
+LICENSE
+.git
+.gitignore
+
+# Don't sync secrets file to Mac (loaded directly from 1Password)
+# {{ if eq .machineType "mac" }}
+.config/secrets/
+# {{ end }}

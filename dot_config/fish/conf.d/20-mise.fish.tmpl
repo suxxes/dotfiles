@@ -1,0 +1,12 @@
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# mise (runtime version manager)
+
+# {{ if eq .osType "darwin" }}
+if test -x /opt/homebrew/bin/mise
+    /opt/homebrew/bin/mise activate fish | source
+end
+# {{ else }}
+if test -x ~/.local/bin/mise
+    ~/.local/bin/mise activate fish | source
+end
+# {{ end }}

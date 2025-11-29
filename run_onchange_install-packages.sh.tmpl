@@ -1,0 +1,40 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Runs when template hash changes
+
+set -e
+
+# {{ if eq .osType "darwin" }}
+echo "==> macOS: Installing packages via Homebrew"
+brew install fish tmux mise mc htop git curl
+
+# {{ else if eq .machineType "lxc" }}
+echo "==> LXC Container: Skipping package install (handled by cloud-init)"
+
+# {{ else }}
+echo "==> Linux: Installing packages"
+sudo apt update
+sudo apt install -y fish tmux mc htop git curl unzip fontconfig
+
+# mise
+if ! command -v mise &> /dev/null; then
+    curl https://mise.run | sh
+fi
+
+# JetBrains Mono fonts
+if [ ! -d /usr/share/fonts/jetbrains-mono ]; then
+    sudo mkdir -p /usr/share/fonts/jetbrains-mono
+    curl -fsSL https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip -o /tmp/jbmono.zip
+    sudo unzip -o /tmp/jbmono.zip -d /tmp/jbmono
+    sudo cp /tmp/jbmono/fonts/ttf/*.ttf /usr/share/fonts/jetbrains-mono/
+    rm -rf /tmp/jbmono /tmp/jbmono.zip
+fi
+
+# JetBrains Mono Nerd Font
+if [ ! -d /usr/share/fonts/jetbrains-mono-nerd ]; then
+    curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.zip -o /tmp/jbnerd.zip
+    sudo unzip -o /tmp/jbnerd.zip -d /usr/share/fonts/jetbrains-mono-nerd
+    rm /tmp/jbnerd.zip
+    sudo fc-cache -fv
+fi
+# {{ end }}

@@ -1,0 +1,11 @@
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Path configuration
+
+# {{ if eq .osType "darwin" }}
+# Homebrew
+eval "$(/opt/homebrew/bin/brew shellenv)"
+fish_add_path /opt/homebrew/bin
+# {{ end }}
+
+# Local binaries
+fish_add_path ~/.local/bin
