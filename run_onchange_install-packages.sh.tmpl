@@ -23,7 +23,6 @@ echo "==> LXC Container: Skipping package install (handled by cloud-init)"
 echo "==> Linux: Installing packages"
 sudo apt update
 sudo apt install -y fish mc htop git curl unzip fontconfig fzf git-lfs
-sudo apt install -y autoconf bison build-essential libssl-dev libyaml-dev libreadline-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev libdb-dev libgmp-dev rustc libtool uuid-dev sqlite3 libsqlite3-dev libxml2-dev libgdbm6
 
 # mise
 if ! command -v fastfetch &> /dev/null; then
@@ -38,7 +37,6 @@ if ! command -v mise &> /dev/null; then
 
     mise use python@3.13
     mise use node@24
-    mise use ruby@3.4
 fi
 # {{ end }}
 
