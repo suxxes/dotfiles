@@ -34,6 +34,7 @@ fi
 
 if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh
+    export PATH="$HOME/.local/bin:$PATH"
 
     mise use python@3.13
     mise use node@24
