@@ -6,7 +6,15 @@ set -e
 
 # {{ if eq .osType "darwin" }}
 echo "==> macOS: Installing packages via Homebrew"
-brew install fish tmux mise mc htop git curl
+
+# Install Homebrew if not present
+if ! command -v brew &> /dev/null; then
+    echo "==> Installing Homebrew"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+brew install fish tmux mise mc htop git curl fzf
 
 # {{ else if eq .machineType "lxc" }}
 echo "==> LXC Container: Skipping package install (handled by cloud-init)"
@@ -14,27 +22,46 @@ echo "==> LXC Container: Skipping package install (handled by cloud-init)"
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
-sudo apt install -y fish tmux mc htop git curl unzip fontconfig
+sudo apt install -y fish mc htop git curl unzip fontconfig fzf
 
 # mise
 if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh
 fi
-
-# JetBrains Mono fonts
-if [ ! -d /usr/share/fonts/jetbrains-mono ]; then
-    sudo mkdir -p /usr/share/fonts/jetbrains-mono
-    curl -fsSL https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip -o /tmp/jbmono.zip
-    sudo unzip -o /tmp/jbmono.zip -d /tmp/jbmono
-    sudo cp /tmp/jbmono/fonts/ttf/*.ttf /usr/share/fonts/jetbrains-mono/
-    rm -rf /tmp/jbmono /tmp/jbmono.zip
-fi
-
-# JetBrains Mono Nerd Font
-if [ ! -d /usr/share/fonts/jetbrains-mono-nerd ]; then
-    curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.zip -o /tmp/jbnerd.zip
-    sudo unzip -o /tmp/jbnerd.zip -d /usr/share/fonts/jetbrains-mono-nerd
-    rm /tmp/jbnerd.zip
-    sudo fc-cache -fv
-fi
 # {{ end }}
+
+# Install Oh My Fish
+if [ ! -d "$HOME/.local/share/omf" ]; then
+    echo "==> Installing Oh My Fish"
+    curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish --command 'source - --noninteractive --yes'
+fi
+
+# Install OMF plugins and theme
+echo "==> Installing OMF plugins"
+fish -c '
+    # bass - run bash scripts in fish
+    if not contains bass (omf list)
+        omf install bass
+    end
+
+    # foreign-env - run bash env scripts
+    if not contains foreign-env (omf list)
+        omf install foreign-env
+    end
+
+    # fzf - fuzzy finder integration
+    if not contains fzf (omf list)
+        omf install fzf
+    end
+
+    # fish-spec - testing framework
+    if not contains fish-spec (omf list)
+        omf install fish-spec
+    end
+
+    # bobthefish theme
+    if not contains bobthefish (omf theme)
+        omf install bobthefish
+        omf theme bobthefish
+    end
+'

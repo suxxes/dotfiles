@@ -1,0 +1,21 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Installs TPM and tmux plugins
+# Hash: # {{ include "dot_tmux.conf" | sha256sum }}
+
+set -e
+
+# {{ if ne .machineType "mac" }}
+# Linux/LXC: skip tmux setup
+exit 0
+# {{ end }}
+
+TPM_DIR="$HOME/.tmux/plugins/tpm"
+
+if [ ! -d "$TPM_DIR" ]; then
+    echo "==> Installing TPM (Tmux Plugin Manager)"
+    git clone https://github.com/tmux-plugins/tpm "$TPM_DIR"
+fi
+
+echo "==> Installing tmux plugins"
+"$TPM_DIR/bin/install_plugins"

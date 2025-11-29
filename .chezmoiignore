@@ -3,7 +3,8 @@ LICENSE
 .git
 .gitignore
 
-# Don't sync secrets file to Mac (loaded directly from 1Password)
-# {{ if eq .machineType "mac" }}
-.config/secrets/
+# Don't sync tmux to Linux/LXC (using tmux from Macbook over SSH)
+# {{ if ne .machineType "mac" }}
+.tmux.conf
+.tmux/
 # {{ end }}
