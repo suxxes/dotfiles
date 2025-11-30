@@ -2,13 +2,11 @@ source ~/.local/share/omf/themes/bobthefish/functions/fish_prompt.fish
 
 functions -c __bobthefish_glyphs __bobthefish_glyphs_original
 
-if set -q TERM_PROGRAM
-    function __bobthefish_glyphs -S
-        __bobthefish_glyphs_original
+function __bobthefish_glyphs -S
+    __bobthefish_glyphs_original
 
-        set -x right_black_arrow_glyph ""
-        set -x right_arrow_glyph       ""
-    end
+    set -x right_black_arrow_glyph ""
+    set -x right_arrow_glyph       ""
 end
 
 function __bobthefish_prompt_node -S -d 'Display current Node information'
