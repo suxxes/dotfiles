@@ -3,11 +3,11 @@ LICENSE
 .git
 .gitignore
 
-# Don't sync tmux to Linux/LXC (using tmux from Macbook over SSH)
-# Don't sync 1Password SSH agent config to Linux (no 1Password app)
-# {{ if ne .machineType "mac" }}
+# Mac-only configs (tmux, 1Password agent, Zed editor)
+# {{ if ne .osType "darwin" }}
 .tmux.conf
 .tmux/
 .ssh/config
 .config/1Password/
+.config/zed/
 # {{ end }}

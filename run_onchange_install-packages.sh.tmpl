@@ -16,21 +16,19 @@ fi
 
 brew install fish tmux mise mc htop git curl fzf
 
-# {{ else if eq .machineType "lxc" }}
-echo "==> LXC Container: Skipping package install (handled by cloud-init)"
-
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
 sudo apt install -y fish mc htop git curl unzip fontconfig fzf git-lfs
 
-# mise
+# fastfetch
 if ! command -v fastfetch &> /dev/null; then
     sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
     sudo apt update
     sudo apt install -y fastfetch
 fi
 
+# mise
 if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh
     export PATH="$HOME/.local/bin:$PATH"
@@ -70,3 +68,13 @@ fish -c '
         omf theme bobthefish
     end
 '
+
+# Install Claude Code
+if ! command -v claude &> /dev/null; then
+    echo "==> Installing Claude Code"
+# {{ if eq .osType "darwin" }}
+    curl -fsLS https://claude.ai/install.sh | bash
+# {{ else }}
+    curl -fsLS https://claude.ai/install.sh | sudo bash -s -- --prefix /usr/local
+# {{ end }}
+fi

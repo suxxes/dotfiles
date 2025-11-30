@@ -1,27 +1,12 @@
 {{- $osType := "linux" -}}
-{{- $machineType := "linux" -}}
-{{- $isContainer := false -}}
 {{- $hostname := .chezmoi.hostname -}}
 
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $osType = "darwin" -}}
-{{-   $machineType = "mac" -}}
-{{- else if eq .chezmoi.os "linux" -}}
-{{-   if stat "/dev/lxd/sock" -}}
-{{-     $isContainer = true -}}
-{{-     $machineType = "lxc" -}}
-{{-   else if env "container" | eq "lxc" -}}
-{{-     $isContainer = true -}}
-{{-     $machineType = "lxc" -}}
-{{-   else -}}
-{{-     $machineType = "linux" -}}
-{{-   end -}}
 {{- end -}}
 
 [data]
   osType = {{ $osType | quote }}
-  machineType = {{ $machineType | quote }}
-  isContainer = {{ $isContainer }}
   hostname = {{ $hostname | quote }}
 
 [onepassword]

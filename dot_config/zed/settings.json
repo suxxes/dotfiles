@@ -1,0 +1,208 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette
+{
+	"use_system_path_prompts": true,
+	"use_system_prompts": true,
+	"audio": {
+		"experimental.auto_speaker_volume": false,
+		"experimental.denoise": false,
+		"experimental.legacy_audio_compatible": false
+	},
+	"git_panel": {
+		"default_width": 378.0
+	},
+	"notification_panel": {
+		"default_width": 378.0,
+		"button": false
+	},
+	"file_finder": {
+		"modal_max_width": "large"
+	},
+	"title_bar": {
+		"show_menus": false,
+		"show_onboarding_banner": false,
+		"show_project_items": true,
+		"show_branch_icon": true
+	},
+	"tab_bar": {
+		"show_nav_history_buttons": true
+	},
+	"search": {
+		"button": false
+	},
+	"diagnostics": {
+		"include_warnings": true,
+		"inline": {
+			"enabled": true
+		},
+		"button": true
+	},
+	"status_bar": {
+		"active_language_button": true
+	},
+	"inlay_hints": {
+		"edit_debounce_ms": 300
+	},
+	"indent_guides": {
+		"line_width": 1,
+		"active_line_width": 1,
+		"enabled": true,
+		"background_coloring": "disabled",
+		"coloring": "indent_aware"
+	},
+	"gutter": {
+		"min_line_number_digits": 4
+	},
+	"toolbar": {
+		"code_actions": true,
+		"agent_review": false,
+		"selections_menu": true,
+		"quick_actions": true,
+		"breadcrumbs": true
+	},
+	"code_actions_on_format": {
+		"source.organizeImports.biome": true,
+		"source.fixAll.biome": true
+	},
+	"use_system_window_tabs": false,
+	"show_whitespaces": "selection",
+	"rounded_selection": false,
+	"current_line_highlight": "all",
+	"cursor_shape": "bar",
+	"agent_buffer_font_size": 13.0,
+	"ui_font_weight": 400.0,
+	"buffer_font_weight": 400.0,
+	"terminal": {
+		"font_family": "JetBrainsMono Nerd Font Mono",
+		"shell": "system",
+		"toolbar": {
+			"breadcrumbs": true
+		},
+		"font_weight": 400.0,
+		"font_size": 13.0,
+		"blinking": "terminal_controlled",
+		"line_height": "comfortable",
+		"dock": "right",
+		"default_width": 756
+	},
+	"disable_ai": true,
+	"edit_predictions": {
+		"mode": "subtle"
+	},
+	"icon_theme": "Catppuccin Mocha",
+	"bottom_dock_layout": "full",
+	"collaboration_panel": {
+		"default_width": 378.0,
+		"button": false
+	},
+	"outline_panel": {
+		"default_width": 378.0,
+		"button": true
+	},
+	"telemetry": {
+		"diagnostics": false,
+		"metrics": false
+	},
+	"project_panel": {
+		"hide_root": false,
+		"sticky_scroll": true,
+		"indent_size": 20.0,
+		"git_status": true,
+		"entry_spacing": "comfortable",
+		"button": true,
+		"auto_fold_dirs": false,
+		"auto_reveal_entries": false,
+		"default_width": 378
+	},
+	"ui_font_family": "JetBrainsMono Nerd Font Mono",
+	"ui_font_size": 14.0,
+	"buffer_font_family": "JetBrainsMono Nerd Font Mono",
+	"buffer_font_size": 13.0,
+	"wrap_guides": [120],
+	"soft_wrap": "editor_width",
+	"preferred_line_length": 120,
+	"preview_tabs": {
+		"enabled": false,
+		"enable_preview_from_file_finder": false,
+		"enable_preview_from_code_navigation": false
+	},
+	"language_servers": [
+		"!prettier",
+		"!eslint",
+		"!typescript-language-server",
+		"!vtsls",
+		"!phpactor"
+	],
+	"formatter": {
+		"language_server": {
+			"name": "biome"
+		}
+	},
+	"languages": {
+		"Rust": {
+			"prettier": {
+				"allowed": false
+			}
+		},
+		"PHP": {
+			"language_servers": ["intelephense", "..."]
+		},
+		"Python": {
+			"language_servers": ["!basedpyright", "pyright", "..."]
+		},
+		"JSON": {
+			"prettier": {
+				"allowed": false
+			},
+			"language_servers": ["...", "biome"]
+		},
+		"JSONC": {
+			"prettier": {
+				"allowed": false
+			},
+			"language_servers": ["...", "biome"]
+		},
+		"HTML": {
+			"language_servers": ["...", "!typescript-language-server", "biome"]
+		},
+		"CSS": {
+			"language_servers": ["...", "!typescript-language-server", "biome"]
+		},
+		"JavaScript": {
+			"language_servers": ["...", "!typescript-language-server", "biome"]
+		},
+		"TypeScript": {
+			"language_servers": ["...", "!typescript-language-server", "biome"]
+		},
+		"TSX": {
+			"prettier": {
+				"allowed": false
+			},
+			"language_servers": ["...", "!typescript-language-server", "biome"]
+		},
+		"Swift": {
+			"language_servers": ["sourcekit-lsp", "package-swift-lsp"],
+			"enable_language_server": true,
+			"formatter": "language_server",
+			"format_on_save": "on"
+		}
+	},
+	"tabs": {
+		"show_close_button": "always",
+		"show_diagnostics": "errors",
+		"close_position": "left",
+		"file_icons": true,
+		"git_status": true
+	},
+	"file_types": {
+		"HTML": [".edge"],
+		"JSON": [".swcrc"]
+	},
+	"theme": "Catppuccin Mocha - No Italics"
+}
