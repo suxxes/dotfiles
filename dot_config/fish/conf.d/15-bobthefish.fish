@@ -1,6 +1,6 @@
 set -g theme_powerline_fonts no
 set -g theme_nerd_fonts yes
-set -g theme_color_scheme nord
+set -g theme_color_scheme catppuccin-mocha
 
 set -g theme_display_git_stashed_verbose no
 set -g theme_display_git_master_branch yes
