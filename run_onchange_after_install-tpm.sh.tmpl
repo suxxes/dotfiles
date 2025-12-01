@@ -5,11 +5,6 @@
 
 set -e
 
-# {{ if ne .osType "darwin" }}
-# Linux: skip tmux setup
-exit 0
-# {{ end }}
-
 TPM_DIR="$HOME/.tmux/plugins/tpm"
 
 if [ ! -d "$TPM_DIR" ]; then

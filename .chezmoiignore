@@ -3,11 +3,10 @@ LICENSE
 .git
 .gitignore
 
-# Mac-only configs (tmux, 1Password agent, Zed editor)
+# Mac-only configs (1Password agent, Zed editor)
 # {{ if ne .osType "darwin" }}
-.tmux.conf
-.tmux/
 .ssh/config
 .config/1Password/
 .config/zed/
+.claude/
 # {{ end }}
