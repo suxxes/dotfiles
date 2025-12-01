@@ -72,9 +72,5 @@ fish -c '
 # Install Claude Code
 if ! command -v claude &> /dev/null; then
     echo "==> Installing Claude Code"
-# {{ if eq .osType "darwin" }}
     curl -fsLS https://claude.ai/install.sh | bash
-# {{ else }}
-    curl -fsLS https://claude.ai/install.sh | sudo bash -s -- --prefix /usr/local
-# {{ end }}
 fi
