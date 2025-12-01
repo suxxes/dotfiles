@@ -47,23 +47,15 @@ fi
 # Install OMF plugins and theme
 echo "==> Installing OMF plugins"
 fish -c '
-    # bass - run bash scripts in fish
-    if not contains bass (omf list)
-        omf install bass
+    set -l installed (omf list | string trim)
+
+    for plugin in bass foreign-env fzf
+        if not string match -q "*$plugin*" "$installed"
+            omf install $plugin
+        end
     end
 
-    # foreign-env - run bash env scripts
-    if not contains foreign-env (omf list)
-        omf install foreign-env
-    end
-
-    # fzf - fuzzy finder integration
-    if not contains fzf (omf list)
-        omf install fzf
-    end
-
-    # bobthefish theme
-    if not contains bobthefish (omf theme)
+    if not string match -q "*bobthefish*" "$installed"
         omf install bobthefish
         omf theme bobthefish
     end
