@@ -1,8 +1,11 @@
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
 # List of plugins
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-sensible'
 set -g @plugin 'tmux-plugins/tmux-cpu'
+# {{ if eq .osType "darwin" }}
 set -g @plugin 'tmux-plugins/tmux-battery'
+# {{ end }}
 set -g @plugin 'catppuccin/tmux'
 
 set -g @suxxes-session-uuid-pattern "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$"
@@ -51,7 +54,9 @@ set -g @catppuccin_status_connect_separator "no"
 source -F "~/.tmux/custom/ram.conf"
 
 run '~/.tmux/plugins/tmux-cpu/cpu.tmux'
+# {{ if eq .osType "darwin" }}
 run '~/.tmux/plugins/tmux-battery/battery.tmux'
+# {{ end }}
 run '~/.tmux/plugins/tmux/catppuccin.tmux'
 
 set -g prefix C-a
@@ -104,7 +109,9 @@ set -g status-right ""
 
 set -agF status-right "#{E:@catppuccin_status_cpu}"
 set -agF status-right "#{E:@catppuccin_status_ram}"
+# {{ if eq .osType "darwin" }}
 set -agF status-right "#{E:@catppuccin_status_battery}"
+# {{ end }}
 set -agF status-right "#{E:@catppuccin_status_date_time}"
 
 # Initialize TMUX plugin manager (keep this line at the very bottom of tmux.conf)
