@@ -30,5 +30,23 @@
 		"bindings": {
 			"cmd-shift-g": "git_panel::ToggleFocus"
 		}
+	},
+	{
+		"context": "(AgentPanel && prompt_editor)",
+		"bindings": {
+			"cmd-n": null
+		}
+	},
+	{
+		"context": "AgentPanel",
+		"bindings": {
+			"cmd-n": null
+		}
+	},
+	{
+		"context": "Terminal",
+		"bindings": {
+			"cmd-n": null
+		}
 	}
 ]
