@@ -3,7 +3,9 @@ source ~/.local/share/omf/themes/bobthefish/functions/fish_prompt.fish
 functions -c __bobthefish_glyphs __bobthefish_glyphs_original
 
 function __bobthefish_glyphs -S
-    __bobthefish_glyphs_original
+    if not set -q MC_SID
+        __bobthefish_glyphs_original
+    end
 
     set -x right_black_arrow_glyph ""
     set -x right_arrow_glyph       ""
