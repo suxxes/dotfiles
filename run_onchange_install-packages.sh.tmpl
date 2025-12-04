@@ -67,6 +67,15 @@ if ! command -v claude &> /dev/null; then
     curl -fsLS https://claude.ai/install.sh | bash
 fi
 
+# Set up Claude credentials symlink if shared storage exists
+if [ -d "/mnt/claude-credentials" ]; then
+    echo "==> Setting up Claude credentials sync"
+    mkdir -p "$HOME/.claude"
+    mkdir -p "/mnt/claude-credentials/.claude"
+    rm -f "$HOME/.claude/.credentials.json"
+    ln -sf /mnt/claude-credentials/.claude/.credentials.json "$HOME/.claude/.credentials.json"
+fi
+
 # Install AWS CLI v2
 if ! command -v aws &> /dev/null; then
     echo "==> Installing AWS CLI v2"
