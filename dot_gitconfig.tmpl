@@ -7,29 +7,18 @@
 # {{ else }}
 	signingkey = ~/.ssh/id_ed25519.pub
 # {{ end }}
-[init]
-	defaultBranch = main
 [core]
 	excludesfile = ~/.gitignore
-	editor = nano
 	filemode = false
 	quotepath = false
 	autocrlf = input
-[diff]
-	colorMoved = default
-[merge]
-	conflictstyle = diff3
-[rerere]
-	enabled = true
-[fetch]
-	prune = true
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	required = true
 	process = git-lfs filter-process
-[pull]
-	rebase = false
+[init]
+	defaultBranch = main
 [gpg]
 	format = ssh
 [gpg "ssh"]
@@ -43,3 +32,51 @@
 	gpgsign = true
 [push]
 	autoSetupRemote = true
+[pull]
+	rebase = false
+[diff]
+    colorMoved = default
+[merge]
+    conflictStyle = zdiff3
+[interactive]
+    diffFilter = delta --color-only
+[delta]
+	features = catppuccin-mocha
+	true-color = always
+    line-numbers = true
+    navigate = false
+    side-by-side = false
+    hyperlinks = true
+# {{ if eq .osType "darwin" }}
+    hyperlinks-file-link-format = "zed://file/{path}:{line}"
+# {{ end }}
+[delta "catppuccin-mocha"]
+	blame-palette = "#1e1e2e #181825 #11111b #313244 #45475a"
+	commit-decoration-style = "#6c7086" bold ul
+	dark = true
+	file-decoration-style = "#6c7086"
+	file-style = omit
+	hunk-header-decoration-style = "#6c7086" ul
+	hunk-header-file-style = bold
+	hunk-header-line-number-style = bold "#a6adc8"
+	hunk-header-style = file line-number syntax
+	line-numbers-left-style = "#6c7086"
+	line-numbers-minus-style = bold "#f38ba8"
+	line-numbers-plus-style = bold "#a6e3a1"
+	line-numbers-right-style = "#6c7086"
+	line-numbers-zero-style = "#6c7086"
+	# 35% red 65% base
+	minus-emph-style = bold syntax "#694559"
+	# 20% red 80% base
+	minus-style = syntax "#493447"
+	# 35% green 65% base
+	plus-emph-style = bold syntax "#4e6356"
+	# 20% green 80% base
+	plus-style = syntax "#394545"
+	map-styles = \
+		bold purple => syntax "#5b4e74", \
+		bold blue => syntax "#445375", \
+		bold cyan => syntax "#446170", \
+		bold yellow => syntax "#6b635b"
+	# Should match the name of the bat theme
+	syntax-theme = Catppuccin Mocha
