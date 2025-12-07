@@ -1,0 +1,23 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Installs OMF plugins and theme
+# Hash: # {{ include "dot_config/fish/conf.d/bobthefish.fish" | sha256sum }}
+
+set -e
+
+# Install OMF plugins and theme
+echo "==> Installing OMF plugins"
+fish -c '
+    set -l installed (omf list | string trim)
+
+    for plugin in bass foreign-env fzf
+        if not string match -q "*$plugin*" "$installed"
+            omf install $plugin
+        end
+    end
+
+    if not string match -q "*bobthefish*" "$installed"
+        omf install bobthefish
+        omf theme bobthefish
+    end
+'

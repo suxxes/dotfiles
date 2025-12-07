@@ -72,23 +72,6 @@ if [ ! -d "$HOME/.local/share/omf" ]; then
     curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish --command 'source - --noninteractive --yes'
 fi
 
-# Install OMF plugins and theme
-echo "==> Installing OMF plugins"
-fish -c '
-    set -l installed (omf list | string trim)
-
-    for plugin in bass foreign-env fzf
-        if not string match -q "*$plugin*" "$installed"
-            omf install $plugin
-        end
-    end
-
-    if not string match -q "*bobthefish*" "$installed"
-        omf install bobthefish
-        omf theme bobthefish
-    end
-'
-
 # Install Claude Code
 if ! command -v claude &> /dev/null; then
     echo "==> Installing Claude Code"
@@ -109,15 +92,4 @@ if ! command -v aws &> /dev/null; then
     sudo /tmp/aws/install
     rm -rf /tmp/awscliv2.zip /tmp/aws
 # {{ end }}
-fi
-
-# Install Catppuccin theme for bat
-if command -v bat &> /dev/null; then
-    echo "==> Installing Catppuccin theme for bat"
-    mkdir -p "$(bat --config-dir)/themes"
-    if [ ! -f "$(bat --config-dir)/themes/Catppuccin Mocha.tmTheme" ]; then
-        curl -fsSL https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme \
-            -o "$(bat --config-dir)/themes/Catppuccin Mocha.tmTheme"
-        bat cache --build
-    fi
 fi
