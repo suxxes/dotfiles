@@ -65,10 +65,15 @@ unbind C-b
 bind C-a send-prefix
 bind R source-file ~/.tmux.conf
 
-set -g mouse on
 set -g default-shell $SHELL
 set -g default-terminal "xterm-256color"
 set -ag terminal-overrides ",xterm-256color:Tc"
+
+set -g mouse on
+bind-key -Tcopy-mode WheelUpPane send -N1 -X scroll-up
+bind-key -Tcopy-mode WheelDownPane send -N1 -X scroll-down
+bind-key -Tcopy-mode-vi WheelUpPane send -N1 -X scroll-up
+bind-key -Tcopy-mode-vi WheelDownPane send -N1 -X scroll-down
 
 set-option -g status-position top
 set-option -g automatic-rename on
