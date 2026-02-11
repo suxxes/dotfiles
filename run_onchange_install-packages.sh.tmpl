@@ -14,7 +14,7 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit
+brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale
 
 # {{ else }}
 echo "==> Linux: Installing packages"
@@ -61,6 +61,12 @@ if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh
     export PATH="$HOME/.local/bin:$PATH"
 fi
+
+# tailscale
+if ! command -v tailscale &> /dev/null; then
+    echo "==> Installing Tailscale"
+    curl -fsSL https://tailscale.com/install.sh | sh
+fi
 # {{ end }}
 
 # Install Oh My Fish
@@ -77,6 +83,40 @@ fi
 
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup
+
+# Authenticate Tailscale
+if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
+    echo "==> Authenticating Tailscale"
+
+    # Determine vaults based on profile type
+    PROFILE_TYPE_FILE="/.profile"
+    if [ -f "$PROFILE_TYPE_FILE" ]; then
+        TS_PROFILE_TYPE=$(cat "$PROFILE_TYPE_FILE" | tr -d '[:space:]')
+    else
+        TS_PROFILE_TYPE="default"
+    fi
+
+    if [ "$TS_PROFILE_TYPE" = "work" ]; then
+        TS_VAULTS=("Secrets" "Secrets: Work")
+    elif [ "$TS_PROFILE_TYPE" = "personal" ]; then
+        TS_VAULTS=("Secrets" "Secrets: Personal")
+    else
+        TS_VAULTS=("Secrets")
+    fi
+
+    TS_AUTHKEY=""
+    for VAULT in "${TS_VAULTS[@]}"; do
+        TS_AUTHKEY=$(op read "op://$VAULT/Tailscale/Auth Key" 2>/dev/null || echo "")
+        [ -n "$TS_AUTHKEY" ] && break
+    done
+
+    if [ -n "$TS_AUTHKEY" ]; then
+        sudo tailscale up --authkey="$TS_AUTHKEY"
+        echo "Tailscale authenticated successfully"
+    else
+        echo "WARNING: Could not fetch Tailscale auth key from 1Password"
+    fi
+fi
 
 # Install AWS CLI v2
 if ! command -v aws &> /dev/null; then
