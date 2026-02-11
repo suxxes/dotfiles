@@ -116,7 +116,7 @@ if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
     done
 
     if [ -n "$TS_AUTHKEY" ]; then
-        sudo tailscale up --authkey="$TS_AUTHKEY"
+        sudo tailscale up --authkey="$TS_AUTHKEY" --advertise-tags=tag:lxc
         echo "Tailscale authenticated successfully"
     else
         echo "WARNING: Could not fetch Tailscale auth key from 1Password"
