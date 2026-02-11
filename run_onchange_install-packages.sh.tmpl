@@ -88,6 +88,11 @@ fi
 if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
     echo "==> Authenticating Tailscale"
 
+    # Load service account token if not already set
+    if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ] && [ -f "$HOME/.config/op/service-account-token" ]; then
+        export OP_SERVICE_ACCOUNT_TOKEN=$(cat "$HOME/.config/op/service-account-token" | tr -d '[:space:]')
+    fi
+
     # Determine vaults based on profile type
     PROFILE_TYPE_FILE="/.profile"
     if [ -f "$PROFILE_TYPE_FILE" ]; then
