@@ -62,7 +62,7 @@ editor_group_undo=false
 editor_state_full_filename=false
 editor_ask_filename_before_edit=false
 nice_rotating_dash=true
-shadows=true
+shadows=false
 mcview_remember_file_position=false
 auto_fill_mkdir_name=true
 copymove_persistent_attr=true
@@ -83,7 +83,7 @@ editor_backup_extension=~
 editor_filesize_threshold=64M
 editor_stop_format_chars=-+*\\,.;:&>
 mcview_eof=
-skin=yadt256-defbg
+skin=modarin256-defbg-thin
 filepos_max_saved_entries=1024
 
 [Layout]
