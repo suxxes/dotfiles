@@ -81,6 +81,40 @@ if ! command -v claude &> /dev/null; then
     curl -fsLS https://claude.ai/install.sh | bash
 fi
 
+# Install Codex CLI
+if ! command -v codex &> /dev/null; then
+    echo "==> Installing Codex CLI"
+    # {{ if eq .osType "darwin" }}
+    brew install --cask codex
+    # {{ else }}
+    CODEX_VERSION=$(curl -s "https://api.github.com/repos/openai/codex/releases/latest" | grep -Po '"tag_name": "rust-v\K[^"]*')
+    if [ -z "$CODEX_VERSION" ]; then
+        echo "WARNING: Could not determine latest Codex version; skipping install"
+    else
+        CODEX_ARCHIVE=""
+        case "$(uname -m)" in
+            x86_64)
+                CODEX_ARCHIVE="codex-x86_64-unknown-linux-musl.tar.gz"
+                ;;
+            aarch64|arm64)
+                CODEX_ARCHIVE="codex-aarch64-unknown-linux-musl.tar.gz"
+                ;;
+            *)
+                echo "WARNING: Unsupported architecture for Codex CLI install: $(uname -m)"
+                ;;
+        esac
+
+        if [ -n "$CODEX_ARCHIVE" ]; then
+            CODEX_BIN="${CODEX_ARCHIVE%.tar.gz}"
+            curl -fsSL "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/${CODEX_ARCHIVE}" -o "/tmp/${CODEX_ARCHIVE}"
+            tar -C /tmp -xzf "/tmp/${CODEX_ARCHIVE}" "${CODEX_BIN}"
+            sudo install "/tmp/${CODEX_BIN}" /usr/local/bin/codex
+            rm -f "/tmp/${CODEX_ARCHIVE}" "/tmp/${CODEX_BIN}"
+        fi
+    fi
+    # {{ end }}
+fi
+
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup
 
