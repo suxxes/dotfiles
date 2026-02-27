@@ -87,29 +87,34 @@ if ! command -v codex &> /dev/null; then
     # {{ if eq .osType "darwin" }}
     brew install --cask codex
     # {{ else }}
-    CODEX_VERSION=$(curl -s "https://api.github.com/repos/openai/codex/releases/latest" | grep -Po '"tag_name": "rust-v\K[^"]*')
-    if [ -z "$CODEX_VERSION" ]; then
-        echo "WARNING: Could not determine latest Codex version; skipping install"
-    else
-        CODEX_ARCHIVE=""
-        case "$(uname -m)" in
-            x86_64)
-                CODEX_ARCHIVE="codex-x86_64-unknown-linux-musl.tar.gz"
-                ;;
-            aarch64|arm64)
-                CODEX_ARCHIVE="codex-aarch64-unknown-linux-musl.tar.gz"
-                ;;
-            *)
-                echo "WARNING: Unsupported architecture for Codex CLI install: $(uname -m)"
-                ;;
-        esac
+    CODEX_ARCHIVE=""
+    case "$(uname -m)" in
+        x86_64)
+            CODEX_ARCHIVE="codex-x86_64-unknown-linux-musl.tar.gz"
+            ;;
+        aarch64|arm64)
+            CODEX_ARCHIVE="codex-aarch64-unknown-linux-musl.tar.gz"
+            ;;
+        *)
+            echo "WARNING: Unsupported architecture for Codex CLI install: $(uname -m)"
+            ;;
+    esac
 
-        if [ -n "$CODEX_ARCHIVE" ]; then
-            CODEX_BIN="${CODEX_ARCHIVE%.tar.gz}"
-            curl -fsSL "https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/${CODEX_ARCHIVE}" -o "/tmp/${CODEX_ARCHIVE}"
-            tar -C /tmp -xzf "/tmp/${CODEX_ARCHIVE}" "${CODEX_BIN}"
-            sudo install "/tmp/${CODEX_BIN}" /usr/local/bin/codex
+    if [ -n "$CODEX_ARCHIVE" ]; then
+        CODEX_BIN="${CODEX_ARCHIVE%.tar.gz}"
+        CODEX_URL="https://github.com/openai/codex/releases/latest/download/${CODEX_ARCHIVE}"
+
+        if curl -fsSL "$CODEX_URL" -o "/tmp/${CODEX_ARCHIVE}"; then
+            if tar -C /tmp -xzf "/tmp/${CODEX_ARCHIVE}" "${CODEX_BIN}"; then
+                if ! sudo install "/tmp/${CODEX_BIN}" /usr/local/bin/codex; then
+                    echo "WARNING: Failed to install Codex CLI binary"
+                fi
+            else
+                echo "WARNING: Failed to extract Codex CLI archive"
+            fi
             rm -f "/tmp/${CODEX_ARCHIVE}" "/tmp/${CODEX_BIN}"
+        else
+            echo "WARNING: Failed to download Codex CLI archive"
         fi
     fi
     # {{ end }}
