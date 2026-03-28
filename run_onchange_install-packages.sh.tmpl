@@ -14,7 +14,7 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh
+brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop
 
 # {{ else }}
 echo "==> Linux: Installing packages"
@@ -66,6 +66,15 @@ fi
 if ! command -v tailscale &> /dev/null; then
     echo "==> Installing Tailscale"
     curl -fsSL https://tailscale.com/install.sh | sh
+fi
+
+# ctop
+if ! command -v ctop &> /dev/null; then
+    echo "==> Installing ctop"
+    CTOP_VERSION=$(curl -s "https://api.github.com/repos/bcicen/ctop/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    curl -fsSL "https://github.com/bcicen/ctop/releases/download/v${CTOP_VERSION}/ctop-${CTOP_VERSION}-linux-amd64" -o /tmp/ctop
+    sudo install /tmp/ctop /usr/local/bin
+    rm /tmp/ctop
 fi
 
 # GitHub CLI
