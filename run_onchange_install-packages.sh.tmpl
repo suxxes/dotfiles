@@ -119,6 +119,12 @@ if ! command -v pi &> /dev/null; then
         fi
     fi
 fi
+
+# pi requires a global node at runtime (calls `npm root -g`). Use mise to provide it.
+if command -v mise &> /dev/null && ! mise exec -- node --version &> /dev/null; then
+    echo "==> Installing global node via mise (required by pi)"
+    mise use --global node
+fi
 # {{ end }}
 
 # Install Oh My Fish
