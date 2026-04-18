@@ -14,7 +14,7 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop
+brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop pi-coding-agent
 
 # {{ else }}
 echo "==> Linux: Installing packages"
@@ -85,6 +85,39 @@ if ! command -v gh &> /dev/null; then
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     sudo apt update
     sudo apt install -y gh
+fi
+
+# pi (from pi.dev)
+if ! command -v pi &> /dev/null; then
+    echo "==> Installing pi"
+    PI_ARCHIVE=""
+    case "$(uname -m)" in
+        x86_64)
+            PI_ARCHIVE="pi-linux-x64.tar.gz"
+            ;;
+        aarch64|arm64)
+            PI_ARCHIVE="pi-linux-arm64.tar.gz"
+            ;;
+        *)
+            echo "WARNING: Unsupported architecture for pi install: $(uname -m)"
+            ;;
+    esac
+
+    if [ -n "$PI_ARCHIVE" ]; then
+        PI_URL="https://github.com/badlogic/pi-mono/releases/latest/download/${PI_ARCHIVE}"
+        if curl -fsSL "$PI_URL" -o "/tmp/${PI_ARCHIVE}"; then
+            sudo rm -rf /opt/pi
+            sudo mkdir -p /opt
+            if sudo tar -C /opt -xzf "/tmp/${PI_ARCHIVE}"; then
+                sudo ln -sf /opt/pi/pi /usr/local/bin/pi
+            else
+                echo "WARNING: Failed to extract pi archive"
+            fi
+            rm -f "/tmp/${PI_ARCHIVE}"
+        else
+            echo "WARNING: Failed to download pi archive"
+        fi
+    fi
 fi
 # {{ end }}
 
