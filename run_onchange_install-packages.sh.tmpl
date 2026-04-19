@@ -125,6 +125,16 @@ if command -v mise &> /dev/null && ! mise exec -- node --version &> /dev/null; t
     echo "==> Installing global node via mise (required by pi)"
     mise use --global node
 fi
+
+# pi is bundled with Bun, which does not implement `node:sqlite`.
+# @samfp/pi-memory 0.3.0+ dropped better-sqlite3 in favor of node:sqlite, breaking pi.
+# Pin to 0.2.0 which uses better-sqlite3 and works under Bun.
+if command -v mise &> /dev/null && mise exec -- node --version &> /dev/null; then
+    if ! mise exec -- npm ls -g @samfp/pi-memory 2>/dev/null | grep -q '@0\.2\.'; then
+        echo "==> Pinning @samfp/pi-memory@0.2.0 (pi/Bun compat)"
+        mise exec -- npm install -g @samfp/pi-memory@0.2.0 >/dev/null 2>&1 || echo "WARNING: pin failed"
+    fi
+fi
 # {{ end }}
 
 # Install Oh My Fish
