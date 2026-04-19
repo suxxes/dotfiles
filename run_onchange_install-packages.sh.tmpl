@@ -56,6 +56,11 @@ if ! command -v lazygit &> /dev/null; then
     rm /tmp/lazygit.tar.gz /tmp/lazygit
 fi
 
+# Ensure ~/.local/bin is in PATH (sudo clears it, chezmoi may inherit sanitized PATH)
+if [ -d "$HOME/.local/bin" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # mise
 if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh
