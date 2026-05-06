@@ -5,6 +5,8 @@
 # Homebrew
 eval "$(/opt/homebrew/bin/brew shellenv)"
 fish_add_path /opt/homebrew/bin
+# libpq is keg-only — expose psql and friends
+fish_add_path /opt/homebrew/opt/libpq/bin
 # {{ end }}
 
 # Local binaries

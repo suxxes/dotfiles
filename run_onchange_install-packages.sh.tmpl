@@ -14,12 +14,12 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop pi-coding-agent
+brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop pi-coding-agent libpq jira-cli
 
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
-sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs
+sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client
 
 # fastfetch
 if ! command -v fastfetch &> /dev/null; then
@@ -80,6 +80,25 @@ if ! command -v ctop &> /dev/null; then
     curl -fsSL "https://github.com/bcicen/ctop/releases/download/v${CTOP_VERSION}/ctop-${CTOP_VERSION}-linux-amd64" -o /tmp/ctop
     sudo install /tmp/ctop /usr/local/bin
     rm /tmp/ctop
+fi
+
+# jira-cli (ankitpokhrel/jira-cli)
+if ! command -v jira &> /dev/null; then
+    echo "==> Installing jira-cli"
+    JIRA_VERSION=$(curl -s "https://api.github.com/repos/ankitpokhrel/jira-cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    JIRA_ARCH=""
+    case "$(uname -m)" in
+        x86_64) JIRA_ARCH="x86_64" ;;
+        aarch64|arm64) JIRA_ARCH="arm64" ;;
+        *) echo "WARNING: Unsupported architecture for jira-cli: $(uname -m)" ;;
+    esac
+    if [ -n "$JIRA_ARCH" ]; then
+        JIRA_DIR="jira_${JIRA_VERSION}_linux_${JIRA_ARCH}"
+        curl -fsSL "https://github.com/ankitpokhrel/jira-cli/releases/download/v${JIRA_VERSION}/${JIRA_DIR}.tar.gz" -o /tmp/jira.tar.gz
+        tar -C /tmp -xzf /tmp/jira.tar.gz "${JIRA_DIR}/bin/jira"
+        sudo install "/tmp/${JIRA_DIR}/bin/jira" /usr/local/bin/jira
+        rm -rf /tmp/jira.tar.gz "/tmp/${JIRA_DIR}"
+    fi
 fi
 
 # GitHub CLI
