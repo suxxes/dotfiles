@@ -1,13 +1,16 @@
 {{- $osType := "linux" -}}
 {{- $hostname := .chezmoi.hostname -}}
+{{- $profile := "default" -}}
 
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $osType = "darwin" -}}
+{{-   $profile = promptChoiceOnce . "profile" "Profile (work or personal)" (list "work" "personal") -}}
 {{- end -}}
 
 [data]
   osType = {{ $osType | quote }}
   hostname = {{ $hostname | quote }}
+  profile = {{ $profile | quote }}
 
 [onepassword]
   command = "op"
