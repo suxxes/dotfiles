@@ -68,14 +68,32 @@ TAILSCALE=/opt/homebrew/bin/tailscale
 mkdir -p "$(dirname "$STATE_FILE")"
 
 CIDRS=$(netstat -nr -f inet 2>/dev/null | awk '
-    /^[0-9]/ && $NF ~ /^utun/ && $1 ~ /\// {
-        split($1, p, "/")
-        if (p[2] + 0 >= 32) next
-        n = split(p[1], o, ".")
+    /^[0-9]/ && $NF ~ /^utun/ {
+        dst = $1
+        if (dst == "default") next
+
+        # Parse "x.y.z/p" or classful shorthand "x", "x.y", "x.y.z"
+        if (index(dst, "/") > 0) {
+            split(dst, p, "/")
+            ip = p[1]
+            prefix = p[2] + 0
+        } else {
+            ip = dst
+            n = split(ip, _o, ".")
+            if (n == 1) prefix = 8
+            else if (n == 2) prefix = 16
+            else if (n == 3) prefix = 24
+            else prefix = 32
+        }
+        if (prefix >= 32) next
+
+        n = split(ip, o, ".")
         for (i = n + 1; i <= 4; i++) o[i] = 0
-        if (o[1] == 0 && o[2] == 0) next
-        if (o[1] == 100 && o[2] >= 64 && o[2] <= 127) next
-        printf "%d.%d.%d.%d/%d\n", o[1], o[2], o[3], o[4], p[2]
+        if (o[1] == 0 && o[2] == 0) next                          # 0.0.0.0/anything
+        if (o[1] == 100 && o[2] >= 64 && o[2] <= 127) next        # Tailscale CGNAT
+        if (o[1] >= 224) next                                     # multicast / reserved
+
+        printf "%d.%d.%d.%d/%d\n", o[1], o[2], o[3], o[4], prefix
     }
 ' | sort -u | paste -sd, -)
 
