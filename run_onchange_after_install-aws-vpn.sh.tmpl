@@ -38,13 +38,11 @@ sudo chmod 644 "$IPFW_PLIST"
 sudo launchctl bootout system "$IPFW_PLIST" 2>/dev/null || true
 sudo launchctl bootstrap system "$IPFW_PLIST"
 
-# ---- 2. NOPASSWD sudoers: tailscale set + route deletes for VPN hijacks -----
+# ---- 2. NOPASSWD sudoers for `tailscale set --advertise-routes` -------------
 SUDOERS_FILE=/etc/sudoers.d/aws-vpn-routes
 sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
 ${USERNAME} ALL=(root) NOPASSWD: ${TAILSCALE_BIN} set --advertise-routes=*
 ${USERNAME} ALL=(root) NOPASSWD: ${TAILSCALE_BIN} set --advertise-routes=
-${USERNAME} ALL=(root) NOPASSWD: /sbin/route delete -inet 0.0.0.0/1
-${USERNAME} ALL=(root) NOPASSWD: /sbin/route delete -inet 128.0.0.0/1
 EOF
 sudo chown root:wheel "$SUDOERS_FILE"
 sudo chmod 440 "$SUDOERS_FILE"
@@ -55,15 +53,11 @@ mkdir -p "$HOME/.local/bin"
 cat > "$WATCHER_BIN" <<'WATCHER'
 #!/bin/bash
 # Auto-managed by chezmoi - do not edit.
-# Two responsibilities, re-evaluated every 30s by LaunchAgent:
-#   1. Remove the AWS VPN client's default-route hijack (0.0.0.0/1, 128.0.0.0/1
-#      via utun). Restores normal internet routing without disconnecting VPN.
-#   2. Discover the remaining AWS VPN network routes from the live routing
-#      table and advertise them through Tailscale.
+# Discovers AWS VPN CIDRs from the live routing table and advertises them
+# through Tailscale. Re-runs via LaunchAgent every 30s.
 #
-# Advertised routes exclude:
+# Picks up: IPv4 network routes whose Netif is a utun*, excluding:
 #   - host routes (/32)
-#   - the 0/1 and 128/1 hijack pair (handled in step 1)
 #   - default route (0.0.0.0/0)
 #   - Tailscale's own CGNAT (100.64.0.0/10)
 set -euo pipefail
@@ -73,19 +67,6 @@ TAILSCALE=/opt/homebrew/bin/tailscale
 
 mkdir -p "$(dirname "$STATE_FILE")"
 
-# Step 1: drop AWS VPN's catch-all default hijacks
-for hijack in 0.0.0.0/1 128.0.0.0/1; do
-    iface=$(/sbin/route -n get -inet "${hijack%/*}" 2>/dev/null | awk '/interface:/ {print $2}')
-    case "$iface" in
-        utun*)
-            if /usr/bin/sudo -n /sbin/route delete -inet "$hijack" >/dev/null 2>&1; then
-                /usr/bin/logger -t aws-vpn-routes "deleted VPN hijack route $hijack via $iface"
-            fi
-            ;;
-    esac
-done
-
-# Step 2: compute VPN network CIDRs from remaining utun routes
 CIDRS=$(netstat -nr -f inet 2>/dev/null | awk '
     /^[0-9]/ && $NF ~ /^utun/ && $1 ~ /\// {
         split($1, p, "/")
@@ -93,7 +74,6 @@ CIDRS=$(netstat -nr -f inet 2>/dev/null | awk '
         n = split(p[1], o, ".")
         for (i = n + 1; i <= 4; i++) o[i] = 0
         if (o[1] == 0 && o[2] == 0) next
-        if (o[1] == 128 && o[2] == 0 && p[2] + 0 == 1) next
         if (o[1] == 100 && o[2] >= 64 && o[2] <= 127) next
         printf "%d.%d.%d.%d/%d\n", o[1], o[2], o[3], o[4], p[2]
     }
