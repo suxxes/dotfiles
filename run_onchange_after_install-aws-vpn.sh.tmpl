@@ -1,0 +1,127 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# macOS work profile: AWS Client VPN -> Tailscale subnet router glue.
+# Sets up IP forwarding, NOPASSWD sudoers, watcher script, LaunchAgent.
+
+set -e
+
+# {{ if and (eq .osType "darwin") (eq .profile "work") }}
+echo "==> macOS work: configuring AWS VPN + Tailscale subnet router"
+
+USER_ID=$(id -u)
+USERNAME=$(whoami)
+TAILSCALE_BIN=/opt/homebrew/bin/tailscale
+
+# ---- 1. IP forwarding LaunchDaemon (root-owned) -----------------------------
+IPFW_PLIST=/Library/LaunchDaemons/local.ipforwarding.plist
+sudo tee "$IPFW_PLIST" > /dev/null <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.ipforwarding</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/sbin/sysctl</string>
+        <string>-w</string>
+        <string>net.inet.ip.forwarding=1</string>
+        <string>net.inet6.ip6.forwarding=1</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+sudo chown root:wheel "$IPFW_PLIST"
+sudo chmod 644 "$IPFW_PLIST"
+sudo launchctl bootout system "$IPFW_PLIST" 2>/dev/null || true
+sudo launchctl bootstrap system "$IPFW_PLIST"
+
+# ---- 2. NOPASSWD sudoers for `tailscale set --advertise-routes` -------------
+SUDOERS_FILE=/etc/sudoers.d/aws-vpn-routes
+sudo tee "$SUDOERS_FILE" > /dev/null <<EOF
+${USERNAME} ALL=(root) NOPASSWD: ${TAILSCALE_BIN} set --advertise-routes=*
+${USERNAME} ALL=(root) NOPASSWD: ${TAILSCALE_BIN} set --advertise-routes=
+EOF
+sudo chown root:wheel "$SUDOERS_FILE"
+sudo chmod 440 "$SUDOERS_FILE"
+
+# ---- 3. Watcher script ------------------------------------------------------
+WATCHER_BIN="$HOME/.local/bin/aws-vpn-routes-watcher"
+mkdir -p "$HOME/.local/bin"
+cat > "$WATCHER_BIN" <<'WATCHER'
+#!/bin/bash
+# Auto-managed by chezmoi - do not edit.
+# Discovers AWS VPN CIDRs from the live routing table and advertises them
+# through Tailscale. Re-runs via LaunchAgent every 30s.
+#
+# Picks up: IPv4 network routes whose Netif is a utun*, excluding:
+#   - host routes (/32)
+#   - default route (0.0.0.0/0)
+#   - Tailscale's own CGNAT (100.64.0.0/10)
+set -euo pipefail
+
+STATE_FILE="$HOME/.cache/aws-vpn-routes.state"
+TAILSCALE=/opt/homebrew/bin/tailscale
+
+mkdir -p "$(dirname "$STATE_FILE")"
+
+CIDRS=$(netstat -nr -f inet 2>/dev/null | awk '
+    /^[0-9]/ && $NF ~ /^utun/ && $1 ~ /\// {
+        split($1, p, "/")
+        if (p[2] + 0 >= 32) next
+        n = split(p[1], o, ".")
+        for (i = n + 1; i <= 4; i++) o[i] = 0
+        if (o[1] == 0 && o[2] == 0) next
+        if (o[1] == 100 && o[2] >= 64 && o[2] <= 127) next
+        printf "%d.%d.%d.%d/%d\n", o[1], o[2], o[3], o[4], p[2]
+    }
+' | sort -u | paste -sd, -)
+
+prev=""
+[ -f "$STATE_FILE" ] && prev=$(cat "$STATE_FILE")
+
+if [ "$CIDRS" != "$prev" ]; then
+    if [ -n "$CIDRS" ]; then
+        /usr/bin/sudo -n "$TAILSCALE" set --advertise-routes="$CIDRS"
+        /usr/bin/logger -t aws-vpn-routes "up: advertising $CIDRS"
+    else
+        /usr/bin/sudo -n "$TAILSCALE" set --advertise-routes=
+        /usr/bin/logger -t aws-vpn-routes "down: cleared routes"
+    fi
+    echo "$CIDRS" > "$STATE_FILE"
+fi
+WATCHER
+chmod 755 "$WATCHER_BIN"
+
+# ---- 4. LaunchAgent (user-owned, polls every 30s) ---------------------------
+AGENT_PLIST="$HOME/Library/LaunchAgents/local.aws-vpn-routes.plist"
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$AGENT_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.aws-vpn-routes</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${WATCHER_BIN}</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>30</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/aws-vpn-routes.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/aws-vpn-routes.err</string>
+</dict>
+</plist>
+PLIST
+launchctl bootout "gui/${USER_ID}" "$AGENT_PLIST" 2>/dev/null || true
+launchctl bootstrap "gui/${USER_ID}" "$AGENT_PLIST"
+
+echo "==> macOS work: AWS VPN tooling configured"
+# {{ end }}
