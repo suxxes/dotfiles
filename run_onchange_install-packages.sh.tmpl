@@ -16,10 +16,6 @@ fi
 
 brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop pi-coding-agent libpq jira-cli
 
-# {{ if eq .profile "work" }}
-brew install --cask aws-vpn-client
-# {{ end }}
-
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
@@ -256,11 +252,6 @@ if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
     else
         echo "WARNING: Could not fetch Tailscale auth key from 1Password"
     fi
-fi
-
-# Work profile: accept Tailscale subnet routes (e.g., AWS CIDRs advertised by Mac subnet router)
-if command -v tailscale &> /dev/null && [ -f /.profile ] && [ "$(cat /.profile | tr -d '[:space:]')" = "work" ]; then
-    sudo tailscale set --accept-routes=true 2>/dev/null || true
 fi
 
 # Install AWS CLI v2
