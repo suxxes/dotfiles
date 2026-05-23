@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Keep conversation sharing explicit instead of automatic.
+  "share": "manual",
+  // Package managers and the install script handle upgrades in this setup.
+  "autoupdate": "notify",
+  "snapshot": true,
+  "mcp": {
+    // Add shared MCP server definitions here so every machine gets the same
+    // OpenCode tool surface. Keep high-token or privileged MCPs disabled until
+    // credentials and scope are confirmed on the target machine.
+  },
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      ".chezmoi/**",
+      ".cache/**",
+      ".local/share/**",
+      "node_modules/**"
+    ]
+  }
+}

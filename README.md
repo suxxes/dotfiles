@@ -2,10 +2,11 @@
 
 # Dotfiles
 
-Cross-machine dotfiles and secrets management using chezmoi with 1Password integration.
+Cross-machine dotfiles, agent settings, and secrets management using chezmoi with 1Password integration.
 
 - **Macbooks**: Interactive `op` CLI with biometric unlock
 - **Linux/LXC**: 1Password Service Account (headless)
+- **AI coding agents**: Claude Code, Codex CLI, and OpenCode baseline configuration
 
 ## Setup
 
@@ -49,6 +50,20 @@ chezmoi apply                                               # Apply locally
 chezmoi cd && git add . && git commit -m "msg" && git push  # Push changes
 chezmoi update                                              # Pull on other machines
 ```
+
+### OpenCode
+
+OpenCode configuration is managed under `dot_config/opencode/` and applied to `~/.config/opencode/`.
+
+- `opencode.jsonc`: global runtime defaults
+- `tui.jsonc`: terminal UI defaults
+- `AGENTS.md`: global OpenCode instructions
+- `commands/`: reusable OpenCode slash commands
+- `skills/`: reusable OpenCode skills shared across machines
+
+Shared MCP servers should be declared in `opencode.jsonc` under `mcp` so every machine gets the same OpenCode tool surface.
+
+Run `opencode` in a project and use `/connect` to authenticate providers.
 
 ### Adding secrets
 
