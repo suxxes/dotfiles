@@ -112,6 +112,16 @@ if ! command -v gh &> /dev/null; then
 fi
 # {{ end }}
 
+# Install global runtimes via mise (node, bun, python)
+if command -v mise &> /dev/null; then
+    for tool in node bun python; do
+        if ! mise exec -- "$tool" --version &> /dev/null; then
+            echo "==> Installing global $tool via mise"
+            mise use --global "$tool"
+        fi
+    done
+fi
+
 # Install Oh My Fish
 if [ ! -d "$HOME/.local/share/omf" ]; then
     echo "==> Installing Oh My Fish"
