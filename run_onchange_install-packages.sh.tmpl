@@ -110,55 +110,6 @@ if ! command -v gh &> /dev/null; then
     sudo apt update
     sudo apt install -y gh
 fi
-
-# pi (from pi.dev)
-if ! command -v pi &> /dev/null; then
-    echo "==> Installing pi"
-    PI_ARCHIVE=""
-    case "$(uname -m)" in
-        x86_64)
-            PI_ARCHIVE="pi-linux-x64.tar.gz"
-            ;;
-        aarch64|arm64)
-            PI_ARCHIVE="pi-linux-arm64.tar.gz"
-            ;;
-        *)
-            echo "WARNING: Unsupported architecture for pi install: $(uname -m)"
-            ;;
-    esac
-
-    if [ -n "$PI_ARCHIVE" ]; then
-        PI_URL="https://github.com/badlogic/pi-mono/releases/latest/download/${PI_ARCHIVE}"
-        if curl -fsSL "$PI_URL" -o "/tmp/${PI_ARCHIVE}"; then
-            sudo rm -rf /opt/pi
-            sudo mkdir -p /opt
-            if sudo tar -C /opt -xzf "/tmp/${PI_ARCHIVE}"; then
-                sudo ln -sf /opt/pi/pi /usr/local/bin/pi
-            else
-                echo "WARNING: Failed to extract pi archive"
-            fi
-            rm -f "/tmp/${PI_ARCHIVE}"
-        else
-            echo "WARNING: Failed to download pi archive"
-        fi
-    fi
-fi
-
-# pi requires a global node at runtime (calls `npm root -g`). Use mise to provide it.
-if command -v mise &> /dev/null && ! mise exec -- node --version &> /dev/null; then
-    echo "==> Installing global node via mise (required by pi)"
-    mise use --global node
-fi
-
-# pi is bundled with Bun, which does not implement `node:sqlite`.
-# @samfp/pi-memory 0.3.0+ dropped better-sqlite3 in favor of node:sqlite, breaking pi.
-# Pin to 0.2.0 which uses better-sqlite3 and works under Bun.
-if command -v mise &> /dev/null && mise exec -- node --version &> /dev/null; then
-    if ! mise exec -- npm ls -g @samfp/pi-memory 2>/dev/null | grep -q '@0\.2\.'; then
-        echo "==> Pinning @samfp/pi-memory@0.2.0 (pi/Bun compat)"
-        mise exec -- npm install -g @samfp/pi-memory@0.2.0 >/dev/null 2>&1 || echo "WARNING: pin failed"
-    fi
-fi
 # {{ end }}
 
 # Install Oh My Fish
