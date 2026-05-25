@@ -14,7 +14,7 @@ if ! command -v brew &> /dev/null; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-brew install fish tmux mise mc htop git curl fzf bat git-delta lazygit tailscale gh ctop pi-coding-agent libpq jira-cli
+brew bundle install --file="$HOME/.Brewfile"
 
 # {{ else }}
 echo "==> Linux: Installing packages"
@@ -173,12 +173,10 @@ if ! command -v claude &> /dev/null; then
     curl -fsLS https://claude.ai/install.sh | bash
 fi
 
-# Install Codex CLI
+# Install Codex CLI (macOS handled via Brewfile)
+# {{ if ne .osType "darwin" }}
 if ! command -v codex &> /dev/null; then
     echo "==> Installing Codex CLI"
-    # {{ if eq .osType "darwin" }}
-    brew install --cask codex
-    # {{ else }}
     CODEX_ARCHIVE=""
     case "$(uname -m)" in
         x86_64)
@@ -209,8 +207,8 @@ if ! command -v codex &> /dev/null; then
             echo "WARNING: Failed to download Codex CLI archive"
         fi
     fi
-    # {{ end }}
 fi
+# {{ end }}
 
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup
@@ -254,25 +252,21 @@ if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
     fi
 fi
 
-# Install AWS CLI v2
+# Install AWS CLI v2 (macOS handled via Brewfile)
+# {{ if ne .osType "darwin" }}
 if ! command -v aws &> /dev/null; then
     echo "==> Installing AWS CLI v2"
-# {{ if eq .osType "darwin" }}
-    brew install awscli
-# {{ else }}
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
     unzip -q /tmp/awscliv2.zip -d /tmp
     sudo /tmp/aws/install
     rm -rf /tmp/awscliv2.zip /tmp/aws
-# {{ end }}
 fi
+# {{ end }}
 
-# Install Session Manager plugin (for `aws ssm start-session`)
+# Install Session Manager plugin (macOS handled via Brewfile)
+# {{ if ne .osType "darwin" }}
 if ! command -v session-manager-plugin &> /dev/null; then
     echo "==> Installing Session Manager plugin"
-# {{ if eq .osType "darwin" }}
-    brew install --cask session-manager-plugin
-# {{ else }}
     SSM_ARCH=""
     case "$(uname -m)" in
         x86_64) SSM_ARCH="ubuntu_64bit" ;;
@@ -284,5 +278,5 @@ if ! command -v session-manager-plugin &> /dev/null; then
         sudo dpkg -i /tmp/session-manager-plugin.deb
         rm /tmp/session-manager-plugin.deb
     fi
-# {{ end }}
 fi
+# {{ end }}
