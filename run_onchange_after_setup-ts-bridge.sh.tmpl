@@ -1,0 +1,182 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Two-tailnet bridge. Daemon A (root netns) advertises a remote CIDR into
+# tailnet A; daemon B (netns "tsb") joins tailnet B and accepts the route from
+# B's upstream subnet router. veth + double MASQUERADE forwards between them.
+# All site-specific values come from 1Password; none are committed here.
+#
+# Hash: # {{ .bridge }} # {{ .hostname }}
+
+set -euo pipefail
+
+# {{ if .bridge }}
+echo "==> Configuring two-tailnet bridge (host: $(hostname))"
+
+NS="tsb"
+ENV_FILE="/etc/ts-bridge.env"
+
+# ---- 1. Pull secrets/config from 1Password (nothing site-specific in repo) ----
+if [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ] && [ -f "$HOME/.config/op/service-account-token" ]; then
+    export OP_SERVICE_ACCOUNT_TOKEN=$(cat "$HOME/.config/op/service-account-token" | tr -d '[:space:]')
+fi
+KEY_A=$(op read "op://Secrets/Tailnet A Bridge Authkey/credential" 2>/dev/null || echo "")
+KEY_B=$(op read "op://Secrets/Tailnet B Bridge Authkey/credential" 2>/dev/null || echo "")
+ADVERTISE_CIDR=$(op read "op://Secrets/Tailnet Bridge Config/advertise_cidr" 2>/dev/null || echo "")
+if [ -z "$KEY_A" ] || [ -z "$KEY_B" ] || [ -z "$ADVERTISE_CIDR" ]; then
+    echo "ERROR: missing bridge key(s)/config in 1Password (Secrets vault)" >&2
+    exit 1
+fi
+
+# Non-secret runtime config consumed by the netns script + units (host-only file)
+sudo tee "$ENV_FILE" > /dev/null <<ENV
+ADVERTISE_CIDR=${ADVERTISE_CIDR}
+ENV
+sudo chmod 600 "$ENV_FILE"
+
+# ---- 2. Mask the stock tailscaled (our two custom daemons replace it) ---------
+sudo systemctl disable --now tailscaled 2>/dev/null || true
+sudo systemctl mask tailscaled 2>/dev/null || true
+
+# ---- 3. netns + veth + sysctl + firewall bring-up script ----------------------
+sudo tee /usr/local/sbin/ts-bridge-netns.sh > /dev/null <<'NETNS'
+#!/bin/bash
+# Idempotent bring-up of the tsb netns, veth pair, forwarding and NAT.
+set -euo pipefail
+
+NS=tsb
+VETH_HOST_IP=10.99.0.1
+VETH_NS_IP=10.99.0.2
+LINK_CIDR=10.99.0.0/30
+. /etc/ts-bridge.env   # provides ADVERTISE_CIDR
+
+ipt_ensure() {  # ipt_ensure <"root"|netns> <table> <chain> <rule...>
+    local where="$1"; shift; local table="$1"; shift; local chain="$1"; shift
+    if [ "$where" = root ]; then
+        iptables -t "$table" -C "$chain" "$@" 2>/dev/null || iptables -t "$table" -A "$chain" "$@"
+    else
+        ip netns exec "$where" iptables -t "$table" -C "$chain" "$@" 2>/dev/null || \
+            ip netns exec "$where" iptables -t "$table" -A "$chain" "$@"
+    fi
+}
+
+ip netns list | awk '{print $1}' | grep -qx "$NS" || ip netns add "$NS"
+
+if ! ip link show veth-host >/dev/null 2>&1; then
+    ip link add veth-host type veth peer name veth-tsb
+    ip link set veth-tsb netns "$NS"
+fi
+
+ip addr show veth-host | grep -qw "$VETH_HOST_IP" || ip addr add "${VETH_HOST_IP}/30" dev veth-host
+ip link set veth-host up
+ip netns exec "$NS" ip addr show veth-tsb | grep -qw "$VETH_NS_IP" || ip netns exec "$NS" ip addr add "${VETH_NS_IP}/30" dev veth-tsb
+ip netns exec "$NS" ip link set veth-tsb up
+ip netns exec "$NS" ip link set lo up
+
+sysctl -qw net.ipv4.ip_forward=1
+ip netns exec "$NS" sysctl -qw net.ipv4.ip_forward=1
+
+ip netns exec "$NS" ip route replace default via "$VETH_HOST_IP" dev veth-tsb
+
+# ADVERTISE_CIDR may be a comma-separated list; handle each CIDR.
+for cidr in ${ADVERTISE_CIDR//,/ }; do
+    ip route replace "$cidr" via "$VETH_NS_IP" dev veth-host
+    # (b) remote-CIDR traffic entering tsb is SNAT'd to the link IP
+    ipt_ensure root nat POSTROUTING -d "$cidr" -o veth-host -j MASQUERADE
+done
+
+# (a) tsb underlay reaches the internet via root's LAN ifaces
+ipt_ensure root nat POSTROUTING -s "$LINK_CIDR" ! -o veth-host -j MASQUERADE
+# (c) inside tsb, remote-CIDR traffic into the tunnel is SNAT'd to the tailnet-B IP
+ipt_ensure "$NS" nat POSTROUTING -o tailscaleb -j MASQUERADE
+
+ipt_ensure root filter FORWARD -i tailscalea -o veth-host -j ACCEPT
+ipt_ensure root filter FORWARD -i veth-host -o tailscalea -j ACCEPT
+ipt_ensure root filter FORWARD -s "$LINK_CIDR" -j ACCEPT
+ipt_ensure root filter FORWARD -d "$LINK_CIDR" -j ACCEPT
+ipt_ensure "$NS" filter FORWARD -i veth-tsb -o tailscaleb -j ACCEPT
+ipt_ensure "$NS" filter FORWARD -i tailscaleb -o veth-tsb -j ACCEPT
+
+echo "ts-bridge netns/veth/forwarding ready"
+NETNS
+sudo chmod 755 /usr/local/sbin/ts-bridge-netns.sh
+
+# ---- 4. systemd units --------------------------------------------------------
+sudo tee /etc/systemd/system/ts-bridge-netns.service > /dev/null <<'UNIT'
+[Unit]
+Description=Two-tailnet bridge netns + veth + forwarding
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ts-bridge-netns.sh
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo tee /etc/systemd/system/tailscaled-a.service > /dev/null <<'UNIT'
+[Unit]
+Description=tailscaled (tailnet A, advertiser)
+After=ts-bridge-netns.service network-online.target
+Wants=network-online.target
+Requires=ts-bridge-netns.service
+
+[Service]
+ExecStart=/usr/sbin/tailscaled --state=/var/lib/tailscale-a/tailscaled.state --socket=/run/tailscale-a/tailscaled.sock --port=41641 --tun=tailscalea
+Restart=on-failure
+RuntimeDirectory=tailscale-a
+StateDirectory=tailscale-a
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo tee /etc/systemd/system/tailscaled-b.service > /dev/null <<'UNIT'
+[Unit]
+Description=tailscaled (tailnet B, consumer) in netns tsb
+After=ts-bridge-netns.service network-online.target
+Wants=network-online.target
+Requires=ts-bridge-netns.service
+
+[Service]
+ExecStart=/usr/bin/ip netns exec tsb /usr/sbin/tailscaled --state=/var/lib/tailscale-b/tailscaled.state --socket=/run/tailscale-b/tailscaled.sock --port=41642 --tun=tailscaleb
+Restart=on-failure
+RuntimeDirectory=tailscale-b
+StateDirectory=tailscale-b
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ---- 5. start ----------------------------------------------------------------
+sudo systemctl daemon-reload
+sudo systemctl enable --now ts-bridge-netns.service
+sudo systemctl enable --now tailscaled-a.service
+sudo systemctl enable --now tailscaled-b.service
+
+for i in $(seq 1 20); do
+    [ -S /run/tailscale-a/tailscaled.sock ] && [ -S /run/tailscale-b/tailscaled.sock ] && break
+    sleep 1
+done
+
+# ---- 6. tailscale up per daemon (idempotent) ---------------------------------
+TS_A="sudo tailscale --socket=/run/tailscale-a/tailscaled.sock"
+TS_B="sudo ip netns exec tsb tailscale --socket=/run/tailscale-b/tailscaled.sock"
+
+if ! $TS_A status >/dev/null 2>&1; then
+    echo "==> daemon A up (advertising remote CIDR)"
+    $TS_A up --authkey="$KEY_A" --hostname=bridge-a \
+        --advertise-routes="${ADVERTISE_CIDR}" --snat-subnet-routes=false \
+        --accept-dns=false --reset
+fi
+if ! $TS_B status >/dev/null 2>&1; then
+    echo "==> daemon B up (accept-routes)"
+    $TS_B up --authkey="$KEY_B" --hostname=bridge-b \
+        --accept-routes --accept-dns=false --reset
+fi
+
+sudo /usr/local/sbin/ts-bridge-netns.sh
+echo "==> bridge configured (route auto-approves via tag:bridge autoApprovers)."
+# {{ end }}

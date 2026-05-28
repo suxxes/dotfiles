@@ -175,6 +175,7 @@ fi
 # See cloud-init.vendor-data in LXD profile for automatic setup
 
 # Authenticate Tailscale
+# {{ if not .bridge }}
 if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
     echo "==> Authenticating Tailscale"
 
@@ -212,6 +213,7 @@ if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
         echo "WARNING: Could not fetch Tailscale auth key from 1Password"
     fi
 fi
+# {{ end }}
 
 # Install AWS CLI v2 (macOS handled via Brewfile)
 # {{ if ne .osType "darwin" }}

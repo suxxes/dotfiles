@@ -1,6 +1,7 @@
 {{- $osType := "linux" -}}
 {{- $hostname := .chezmoi.hostname -}}
 {{- $profile := "default" -}}
+{{- $bridge := eq .chezmoi.hostname "tailscale-bridge" -}}
 
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $osType = "darwin" -}}
@@ -11,6 +12,7 @@
   osType = {{ $osType | quote }}
   hostname = {{ $hostname | quote }}
   profile = {{ $profile | quote }}
+  bridge = {{ $bridge }}
 
 [onepassword]
   command = "op"
