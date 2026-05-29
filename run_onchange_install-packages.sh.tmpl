@@ -19,7 +19,7 @@ brew bundle install --file="$HOME/.Brewfile"
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
-sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client
+sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client xdg-utils
 
 # fastfetch
 if ! command -v fastfetch &> /dev/null; then
@@ -109,6 +109,74 @@ if ! command -v gh &> /dev/null; then
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     sudo apt update
     sudo apt install -y gh
+fi
+
+# Work-only CLIs (railway, render, supabase) - gated on runtime profile
+WORK_PROFILE_FILE="/.profile"
+if [ -f "$WORK_PROFILE_FILE" ]; then
+    WORK_PROFILE=$(cat "$WORK_PROFILE_FILE" | tr -d '[:space:]')
+else
+    WORK_PROFILE="default"
+fi
+
+if [ "$WORK_PROFILE" = "work" ]; then
+    echo "==> Installing work CLIs (railway, render, supabase)"
+
+    # Railway CLI
+    if ! command -v railway &> /dev/null; then
+        echo "==> Installing Railway CLI"
+        RAILWAY_VERSION=$(curl -s "https://api.github.com/repos/railwayapp/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        RAILWAY_TARGET=""
+        case "$(uname -m)" in
+            x86_64) RAILWAY_TARGET="x86_64-unknown-linux-musl" ;;
+            aarch64|arm64) RAILWAY_TARGET="aarch64-unknown-linux-musl" ;;
+            *) echo "WARNING: Unsupported architecture for Railway CLI: $(uname -m)" ;;
+        esac
+        if [ -n "$RAILWAY_TARGET" ]; then
+            RAILWAY_TARBALL="railway-v${RAILWAY_VERSION}-${RAILWAY_TARGET}.tar.gz"
+            curl -fsSL "https://github.com/railwayapp/cli/releases/download/v${RAILWAY_VERSION}/${RAILWAY_TARBALL}" -o /tmp/railway.tar.gz
+            tar -C /tmp -xzf /tmp/railway.tar.gz railway
+            sudo install /tmp/railway /usr/local/bin/railway
+            rm -f /tmp/railway.tar.gz /tmp/railway
+        fi
+    fi
+
+    # Render CLI
+    if ! command -v render &> /dev/null; then
+        echo "==> Installing Render CLI"
+        RENDER_VERSION=$(curl -s "https://api.github.com/repos/render-oss/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        RENDER_ARCH=""
+        case "$(uname -m)" in
+            x86_64) RENDER_ARCH="amd64" ;;
+            aarch64|arm64) RENDER_ARCH="arm64" ;;
+            *) echo "WARNING: Unsupported architecture for Render CLI: $(uname -m)" ;;
+        esac
+        if [ -n "$RENDER_ARCH" ]; then
+            RENDER_ZIP="cli_${RENDER_VERSION}_linux_${RENDER_ARCH}.zip"
+            curl -fsSL "https://github.com/render-oss/cli/releases/download/v${RENDER_VERSION}/${RENDER_ZIP}" -o /tmp/render.zip
+            unzip -oq /tmp/render.zip "cli_v${RENDER_VERSION}" -d /tmp
+            sudo install "/tmp/cli_v${RENDER_VERSION}" /usr/local/bin/render
+            rm -f /tmp/render.zip "/tmp/cli_v${RENDER_VERSION}"
+        fi
+    fi
+
+    # Supabase CLI
+    if ! command -v supabase &> /dev/null; then
+        echo "==> Installing Supabase CLI"
+        SUPABASE_VERSION=$(curl -s "https://api.github.com/repos/supabase/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        SUPABASE_ARCH=""
+        case "$(uname -m)" in
+            x86_64) SUPABASE_ARCH="amd64" ;;
+            aarch64|arm64) SUPABASE_ARCH="arm64" ;;
+            *) echo "WARNING: Unsupported architecture for Supabase CLI: $(uname -m)" ;;
+        esac
+        if [ -n "$SUPABASE_ARCH" ]; then
+            SUPABASE_DEB="supabase_${SUPABASE_VERSION}_linux_${SUPABASE_ARCH}.deb"
+            curl -fsSL "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/${SUPABASE_DEB}" -o /tmp/supabase.deb
+            sudo dpkg -i /tmp/supabase.deb
+            rm -f /tmp/supabase.deb
+        fi
+    fi
 fi
 # {{ end }}
 
