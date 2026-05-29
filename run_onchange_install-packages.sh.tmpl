@@ -125,7 +125,7 @@ if [ "$WORK_PROFILE" = "work" ]; then
     # Railway CLI
     if ! command -v railway &> /dev/null; then
         echo "==> Installing Railway CLI"
-        RAILWAY_VERSION=$(curl -s "https://api.github.com/repos/railwayapp/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        RAILWAY_VERSION=$(curl -s "https://api.github.com/repos/railwayapp/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
         RAILWAY_TARGET=""
         case "$(uname -m)" in
             x86_64) RAILWAY_TARGET="x86_64-unknown-linux-musl" ;;
@@ -144,7 +144,7 @@ if [ "$WORK_PROFILE" = "work" ]; then
     # Render CLI
     if ! command -v render &> /dev/null; then
         echo "==> Installing Render CLI"
-        RENDER_VERSION=$(curl -s "https://api.github.com/repos/render-oss/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        RENDER_VERSION=$(curl -s "https://api.github.com/repos/render-oss/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
         RENDER_ARCH=""
         case "$(uname -m)" in
             x86_64) RENDER_ARCH="amd64" ;;
@@ -163,7 +163,7 @@ if [ "$WORK_PROFILE" = "work" ]; then
     # Supabase CLI
     if ! command -v supabase &> /dev/null; then
         echo "==> Installing Supabase CLI"
-        SUPABASE_VERSION=$(curl -s "https://api.github.com/repos/supabase/cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        SUPABASE_VERSION=$(curl -s "https://api.github.com/repos/supabase/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
         SUPABASE_ARCH=""
         case "$(uname -m)" in
             x86_64) SUPABASE_ARCH="amd64" ;;
