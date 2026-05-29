@@ -73,3 +73,10 @@ mas "Pixelmator Pro", id: 1289583905
 mas "Telegram", id: 747648890
 mas "Xcode", id: 497799835
 npm "agent-browser"
+{{ if eq .profile "work" -}}
+brew "railway"
+tap "render-oss/render"
+brew "render-oss/render/render"
+tap "supabase/tap"
+brew "supabase/tap/supabase"
+{{- end }}
