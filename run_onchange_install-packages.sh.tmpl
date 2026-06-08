@@ -244,8 +244,8 @@ fi
 
 # Authenticate Tailscale
 # {{ if not .bridge }}
-if command -v tailscale &> /dev/null && ! tailscale status &> /dev/null; then
-    echo "==> Authenticating Tailscale"
+if command -v tailscale &> /dev/null && ! tailscale ip -1 &> /dev/null; then
+    echo "==> Authenticating Tailscale (no tailnet IP detected)"
 
     # Load service account token if not already set
     if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ] && [ -f "$HOME/.config/op/service-account-token" ]; then
