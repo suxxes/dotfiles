@@ -242,46 +242,7 @@ fi
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup
 
-# Authenticate Tailscale
-# {{ if not .bridge }}
-if command -v tailscale &> /dev/null && ! tailscale ip -1 &> /dev/null; then
-    echo "==> Authenticating Tailscale (no tailnet IP detected)"
-
-    # Load service account token if not already set
-    if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ] && [ -f "$HOME/.config/op/service-account-token" ]; then
-        export OP_SERVICE_ACCOUNT_TOKEN=$(cat "$HOME/.config/op/service-account-token" | tr -d '[:space:]')
-    fi
-
-    # Determine vaults based on profile type
-    PROFILE_TYPE_FILE="/.profile"
-    if [ -f "$PROFILE_TYPE_FILE" ]; then
-        TS_PROFILE_TYPE=$(cat "$PROFILE_TYPE_FILE" | tr -d '[:space:]')
-    else
-        TS_PROFILE_TYPE="default"
-    fi
-
-    if [ "$TS_PROFILE_TYPE" = "work" ]; then
-        TS_VAULTS=("Secrets" "Secrets: Work")
-    elif [ "$TS_PROFILE_TYPE" = "personal" ]; then
-        TS_VAULTS=("Secrets" "Secrets: Personal")
-    else
-        TS_VAULTS=("Secrets")
-    fi
-
-    TS_AUTHKEY=""
-    for VAULT in "${TS_VAULTS[@]}"; do
-        TS_AUTHKEY=$(op read "op://$VAULT/Tailscale/Auth Key" 2>/dev/null || echo "")
-        [ -n "$TS_AUTHKEY" ] && break
-    done
-
-    if [ -n "$TS_AUTHKEY" ]; then
-        sudo tailscale up --authkey="$TS_AUTHKEY" --advertise-tags=tag:lxc
-        echo "Tailscale authenticated successfully"
-    else
-        echo "WARNING: Could not fetch Tailscale auth key from 1Password"
-    fi
-fi
-# {{ end }}
+# Tailscale auth: handled by run_after_tailscale-auth.sh.tmpl (runs every apply)
 
 # Install AWS CLI v2 (macOS handled via Brewfile)
 # {{ if ne .osType "darwin" }}
