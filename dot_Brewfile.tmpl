@@ -1,4 +1,4 @@
-tap "tw93/tap"
+tap "tw93/tap", trusted: true
 brew "act"
 brew "awscli"
 brew "bash"
@@ -72,8 +72,8 @@ mas "Xcode", id: 497799835
 npm "agent-browser"
 {{ if eq .profile "work" -}}
 brew "railway"
-tap "render-oss/render"
+tap "render-oss/render", trusted: true
 brew "render-oss/render/render"
-tap "supabase/tap"
+tap "supabase/tap", trusted: true
 brew "supabase/tap/supabase"
 {{- end }}
