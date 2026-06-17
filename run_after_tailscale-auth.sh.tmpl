@@ -49,7 +49,15 @@ for VAULT in "${TS_VAULTS[@]}"; do
 done
 
 if [ -n "$TS_AUTHKEY" ]; then
-    sudo tailscale up --authkey="$TS_AUTHKEY" --advertise-tags=tag:lxc
+    # Pass key via file (not argv) so tailscale errors don't echo it into logs.
+    # --reset normalizes prior non-default flags (e.g. --accept-routes from
+    # the reverted AWS VPN glue) instead of failing with "mention all flags".
+    TS_KEYFILE=$(mktemp)
+    trap 'rm -f "$TS_KEYFILE"' EXIT
+    chmod 600 "$TS_KEYFILE"
+    printf '%s' "$TS_AUTHKEY" > "$TS_KEYFILE"
+    sudo tailscale up --reset --auth-key="file:$TS_KEYFILE" --advertise-tags=tag:lxc
+    rm -f "$TS_KEYFILE"
     echo "Tailscale re-authenticated"
 else
     echo "WARNING: Could not fetch Tailscale auth key from 1Password" >&2

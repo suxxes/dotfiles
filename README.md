@@ -1,4 +1,4 @@
-<!-- Updated: 2025-11-29 11:47:32 UTC -->
+<!-- Updated: 2026-06-17 15:58:24 UTC -->
 
 # Dotfiles
 
@@ -45,7 +45,7 @@ chsh -s /usr/bin/fish
 
 ```bash
 chezmoi edit ~/.config/fish/config.fish                     # Edit config
-chezmoi apply                                               # Apply locally
+chezmoi apply --force                                       # Apply locally (overwrites drifted files; required so run_after_ scripts always reach the tailscale self-heal)
 chezmoi cd && git add . && git commit -m "msg" && git push  # Push changes
 chezmoi update                                              # Pull on other machines
 ```
