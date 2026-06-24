@@ -1,0 +1,115 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Caddy reverse proxy on usakura with *.home.unno.me wildcard cert via
+# DigitalOcean DNS-01. Gated on hostname; other hosts no-op.
+#
+# Hash: # {{ .chezmoi.hostname }}
+
+set -euo pipefail
+
+# {{ if ne .chezmoi.hostname "usakura" }}
+exit 0
+# {{ end }}
+
+echo "==> Configuring Caddy on usakura"
+
+# ---- 1. Caddy binary + DigitalOcean DNS plugin ---------------------------
+NEED_INSTALL=0
+if ! command -v caddy >/dev/null 2>&1; then
+    NEED_INSTALL=1
+elif ! caddy list-modules 2>/dev/null | grep -qx 'dns.providers.digitalocean'; then
+    NEED_INSTALL=1
+fi
+
+if [ "$NEED_INSTALL" = "1" ]; then
+    echo "==> Downloading Caddy + digitalocean plugin"
+    ARCH=$(dpkg --print-architecture)
+    curl -fsSL -o /tmp/caddy "https://caddyserver.com/api/download?os=linux&arch=${ARCH}&p=github.com%2Fcaddy-dns%2Fdigitalocean"
+    sudo install -o root -g root -m 0755 /tmp/caddy /usr/local/bin/caddy
+    rm -f /tmp/caddy
+fi
+caddy version
+
+# ---- 2. caddy user + dirs ------------------------------------------------
+id caddy >/dev/null 2>&1 || sudo useradd --system --home-dir /var/lib/caddy --no-create-home --shell /usr/sbin/nologin caddy
+sudo mkdir -p /etc/caddy /var/lib/caddy /var/log/caddy
+sudo chown -R caddy:caddy /var/lib/caddy /var/log/caddy
+
+# ---- 3. DigitalOcean API token from 1Password ----------------------------
+if [ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" ] && [ -f "$HOME/.config/op/service-account-token" ]; then
+    export OP_SERVICE_ACCOUNT_TOKEN=$(cat "$HOME/.config/op/service-account-token" | tr -d '[:space:]')
+fi
+if ! command -v op >/dev/null 2>&1; then
+    echo "ERROR: 1Password CLI (op) not installed; cannot fetch DO token" >&2
+    exit 1
+fi
+
+# `op read "op://Secrets: Personal/..."` errors on the colon; use --vault instead.
+DO_TOKEN=""
+for VAULT in "Secrets: Personal" "Secrets"; do
+    DO_TOKEN=$(op item get "DigitalOcean API Token (Caddy)" --vault "$VAULT" --fields credential --reveal 2>/dev/null || echo "")
+    [ -n "$DO_TOKEN" ] && break
+done
+if [ -z "$DO_TOKEN" ]; then
+    echo "ERROR: DigitalOcean API token not found in 1Password (Secrets / Secrets: Personal)" >&2
+    exit 1
+fi
+
+# Write env file via stdin (token never on argv). Root-owned, caddy-readable.
+sudo install -o root -g caddy -m 640 /dev/null /etc/caddy/do.env
+printf 'DO_AUTH_TOKEN=%s\n' "$DO_TOKEN" | sudo tee /etc/caddy/do.env >/dev/null
+sudo chmod 640 /etc/caddy/do.env
+sudo chown root:caddy /etc/caddy/do.env
+
+# ---- 4. Caddyfile --------------------------------------------------------
+sudo tee /etc/caddy/Caddyfile >/dev/null <<'CADDY'
+{
+    email unno@unno.me
+}
+
+*.home.unno.me {
+    tls {
+        dns digitalocean {env.DO_AUTH_TOKEN}
+    }
+    respond "caddy up on usakura. add backends in /etc/caddy/Caddyfile" 200
+}
+CADDY
+sudo chown root:caddy /etc/caddy/Caddyfile
+sudo chmod 644 /etc/caddy/Caddyfile
+
+# ---- 5. systemd unit -----------------------------------------------------
+sudo tee /etc/systemd/system/caddy.service >/dev/null <<'UNIT'
+[Unit]
+Description=Caddy
+Documentation=https://caddyserver.com/docs/
+After=network.target network-online.target
+Requires=network-online.target
+
+[Service]
+Type=notify
+User=caddy
+Group=caddy
+EnvironmentFile=/etc/caddy/do.env
+ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile
+ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+PrivateTmp=true
+ProtectSystem=full
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ---- 6. Validate + reload (zero-downtime if already running) -------------
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl daemon-reload
+sudo systemctl enable caddy >/dev/null 2>&1 || true
+if systemctl is-active caddy >/dev/null 2>&1; then
+    sudo systemctl reload caddy
+else
+    sudo systemctl start caddy
+fi
+systemctl is-active caddy
+echo "==> Caddy configured on usakura"

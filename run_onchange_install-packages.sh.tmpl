@@ -4,6 +4,12 @@
 
 set -e
 
+# usakura is the LXD host, not a managed dev container; skip container tooling.
+# {{ if eq .chezmoi.hostname "usakura" }}
+echo "==> usakura host: skipping install-packages"
+exit 0
+# {{ end }}
+
 # {{ if eq .osType "darwin" }}
 echo "==> macOS: Installing packages via Homebrew"
 
