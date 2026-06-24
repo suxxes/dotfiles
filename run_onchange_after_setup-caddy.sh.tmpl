@@ -74,17 +74,44 @@ sudo tee /etc/caddy/Caddyfile >/dev/null <<'CADDY'
 }
 
 # Monitoring / infra
-grafana.home.unno.me     { import home_tls; reverse_proxy 10.0.0.103:3000 }
-prometheus.home.unno.me  { import home_tls; reverse_proxy 10.0.0.31:9090 }
-loki.home.unno.me        { import home_tls; reverse_proxy 10.0.0.23:3100 }
-minio.home.unno.me       { import home_tls; reverse_proxy 10.0.0.148:9001 }
-ha.home.unno.me          { import home_tls; reverse_proxy 10.0.0.107:8123 }
+grafana.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.103:3000
+}
+prometheus.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.31:9090
+}
+loki.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.23:3100
+}
+minio.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.148:9001
+}
+ha.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.107:8123
+}
 
 # Dev apps
-orca-osint.home.unno.me  { import home_tls; reverse_proxy 10.0.0.197:3000 }
-seven.home.unno.me       { import home_tls; reverse_proxy 10.0.0.194:3000 }
-wa-admin.home.unno.me    { import home_tls; reverse_proxy 10.0.0.193:3000 }
-orca-oasis.home.unno.me  { import home_tls; reverse_proxy 10.0.0.3:8000 }
+orca-osint.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.197:3000
+}
+seven.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.194:3000
+}
+wa-admin.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.193:3000
+}
+orca-oasis.home.unno.me {
+    import home_tls
+    reverse_proxy 10.0.0.3:8000
+}
 
 # Catch-all for unknown subdomains (still serves wildcard cert)
 *.home.unno.me {
