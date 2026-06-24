@@ -5,6 +5,8 @@
 
 set -e
 
+command -v tmux >/dev/null 2>&1 || exit 0
+
 TPM_DIR="$HOME/.tmux/plugins/tpm"
 
 if [ ! -d "$TPM_DIR" ]; then
