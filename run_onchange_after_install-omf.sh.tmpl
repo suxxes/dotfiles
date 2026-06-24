@@ -5,6 +5,8 @@
 
 set -e
 
+command -v fish >/dev/null 2>&1 || exit 0
+
 # Install OMF plugins and theme
 echo "==> Installing OMF plugins"
 fish -c '
