@@ -9,6 +9,11 @@ set -e
 exit 0
 # {{ end }}
 
+# usakura is the LXD host with its own tailscale config (different tag + subnet route).
+# {{ if eq .chezmoi.hostname "usakura" }}
+exit 0
+# {{ end }}
+
 command -v tailscale &> /dev/null || exit 0
 
 # Already authenticated -> no-op
