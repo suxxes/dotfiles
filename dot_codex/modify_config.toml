@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+
+
+lines = sys.stdin.read().splitlines()
+top = {
+    "personality": '"pragmatic"',
+    "model_verbosity": '"low"',
+    "model_reasoning_summary": '"concise"',
+    "model": '"gpt-5.6-sol"',
+    "enabled-reasoning-efforts": '["medium", "xhigh"]',
+    "model_reasoning_effort": '"xhigh"',
+    "approval_policy": '"never"',
+    "approvals_reviewer": '"user"',
+    "sandbox_mode": '"danger-full-access"',
+}
+features = {
+    "multi_agent": "true",
+    "hooks": "true",
+    "js_repl": "true",
+    "guardian_approval": "true",
+    "terminal_resize_reflow": "true",
+    "memories": "false",
+    "goals": "true",
+}
+first_table = next(
+    (index for index, line in enumerate(lines) if re.match(r"^\s*\[", line)),
+    len(lines),
+)
+top_pattern = re.compile(
+    r"^\s*(" + "|".join(re.escape(key) for key in top) + r")\s*="
+)
+head = [line for line in lines[:first_table] if not top_pattern.match(line)]
+while head and not head[-1].strip():
+    head.pop()
+head.extend(f"{key} = {value}" for key, value in top.items())
+head.append("")
+rest = lines[first_table:]
+feature_start = next(
+    (index for index, line in enumerate(rest) if line.strip() == "[features]"),
+    None,
+)
+if feature_start is None:
+    if rest and rest[-1].strip():
+        rest.append("")
+    rest.append("[features]")
+    rest.extend(f"{key} = {value}" for key, value in features.items())
+else:
+    feature_end = next(
+        (
+            index
+            for index in range(feature_start + 1, len(rest))
+            if re.match(r"^\s*\[", rest[index])
+        ),
+        len(rest),
+    )
+    feature_pattern = re.compile(
+        r"^\s*(" + "|".join(re.escape(key) for key in features) + r")\s*="
+    )
+    section = [
+        line
+        for line in rest[feature_start + 1 : feature_end]
+        if not feature_pattern.match(line)
+    ]
+    while section and not section[-1].strip():
+        section.pop()
+    section.extend(f"{key} = {value}" for key, value in features.items())
+    section.append("")
+    rest = rest[: feature_start + 1] + section + rest[feature_end:]
+sys.stdout.write("\n".join(head + rest).rstrip() + "\n")
