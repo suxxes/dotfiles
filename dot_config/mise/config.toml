@@ -2,3 +2,6 @@
 experimental = true
 not_found_auto_install = true
 idiomatic_version_file_enable_tools = ["node", "python"]
+
+[tools]
+node = "26"

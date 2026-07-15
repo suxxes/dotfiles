@@ -8,5 +8,4 @@ LICENSE
 .ssh/config
 .config/1Password/
 .config/zed/
-.claude/
 # {{ end }}

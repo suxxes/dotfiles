@@ -1,5 +1,139 @@
 {
-	"includeCoAuthoredBy": false,
-	"spinnerTipsEnabled": false,
-	"alwaysThinkingEnabled": false
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "cleanupPeriodDays": 365,
+  "env": {
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1",
+    "DISABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_BUG_COMMAND": "1",
+    "CLAUDE_CODE_DISABLE_ADVISOR_TOOL": "1"
+  },
+  "includeCoAuthoredBy": false,
+  "includeGitInstructions": false,
+  "permissions": {
+    "deny": [
+      "Skill(deep-research)",
+      "Workflow(deep-research)",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "Agent(Plan)",
+      "NotebookEdit",
+      "LSP",
+      "Agent(statusline-setup)"
+    ],
+    "defaultMode": "dontAsk"
+  },
+  "model": "claude-fable-5",
+  "skillOverrides": {
+    "deep-research": "off",
+    "code-review": "off",
+    "review": "off",
+    "security-review": "off",
+    "init": "off",
+    "verify": "off",
+    "simplify": "off",
+    "claude-api": "off",
+    "fewer-permission-prompts": "off",
+    "run": "off",
+    "dataviz": "off",
+    "keybindings-help": "off",
+    "update-config": "off",
+    "epistemic": "off"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/autoformat.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/security-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/commit-guard.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/epistemic-context.sh"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/quality-gate.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "disableRemoteControl": true,
+  "disableArtifact": true,
+  "workflowKeywordTriggerEnabled": false,
+  "enabledPlugins": {
+    "feature-pipeline@feature-pipeline": true,
+    "codex@openai-codex": true
+  },
+  "extraKnownMarketplaces": {
+    "feature-pipeline": {
+      "source": {
+        "source": "github",
+        "repo": "suxxes/feature-pipeline"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    }
+  },
+  "feedbackSurveyRate": 0,
+  "spinnerTipsEnabled": false,
+  "promptSuggestionEnabled": false,
+  "awaySummaryEnabled": false,
+  "tui": "default",
+  "autoMemoryEnabled": false,
+  "autoDreamEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "disableAutoMode": "disable",
+  "theme": "dark-daltonized",
+  "preferredNotifChannel": "ghostty",
+  "autoCompactEnabled": true,
+  "switchModelsOnFlag": false,
+  "todoFeatureEnabled": false,
+  "remoteControlAtStartup": false,
+  "autoUploadSessions": false,
+  "disableDeepLinkRegistration": "disable",
+  "effortLevel": "xhigh"
 }
