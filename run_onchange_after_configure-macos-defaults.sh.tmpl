@@ -1,0 +1,68 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# macOS system + utility-app defaults. macOS-only; non-darwin hosts no-op.
+# Values chosen to reproduce the maintainer's Mac setup (dev-friendly, dark,
+# no auto-substitution). Re-runs when this script's content changes.
+#
+# Hash: # {{ .osType }}
+
+set -euo pipefail
+
+# {{ if ne .osType "darwin" }}
+exit 0
+# {{ end }}
+
+echo "==> Applying macOS defaults"
+
+# ---- Dock --------------------------------------------------------------
+defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock tilesize -int 128
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock mru-spaces -bool false
+
+# Ensure at least DOCK_SPACERS spacer tiles at the end of persistent-apps.
+# Idempotent: only tops up the shortfall so re-runs don't accumulate spacers.
+DOCK_SPACERS=10
+SPACER_COUNT=$(defaults read com.apple.dock persistent-apps 2>/dev/null | grep -c 'spacer-tile' || true)
+while [ "$SPACER_COUNT" -lt "$DOCK_SPACERS" ]; do
+    defaults write com.apple.dock persistent-apps -array-add '{"tile-data"={}; "tile-type"="spacer-tile";}'
+    SPACER_COUNT=$((SPACER_COUNT + 1))
+done
+
+# ---- Finder ------------------------------------------------------------
+defaults write com.apple.finder ShowPathbar -bool true
+defaults write com.apple.finder ShowStatusBar -bool true
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"  # list view
+defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+
+# ---- Global (keyboard, text, appearance) -------------------------------
+defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
+defaults write NSGlobalDomain KeyRepeat -int 5
+defaults write NSGlobalDomain InitialKeyRepeat -int 15
+defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
+
+# ---- Itsycal (menubar calendar) ----------------------------------------
+defaults write com.mowglii.ItsycalApp ClockFormat -string "MMMM d, hh:mm a"
+defaults write com.mowglii.ItsycalApp HideIcon -bool true
+defaults write com.mowglii.ItsycalApp ShowEventDays -int 7
+
+# ---- Amphetamine -------------------------------------------------------
+defaults write com.if.Amphetamine "Hide Dock Icon" -bool true
+defaults write com.if.Amphetamine "Icon Style" -int 9
+
+# ---- AppCleaner (opinionated; app writes on first launch otherwise) ----
+defaults write net.freemacsoft.AppCleaner SmartDelete -bool true
+
+# ---- The Unarchiver (opinionated defaults) -----------------------------
+defaults write com.macpaw.site.theunarchiver extractionDestination -int 1  # same folder as archive
+defaults write com.macpaw.site.theunarchiver deleteExtractedArchive -bool true
+
+# ---- Reload affected services -----------------------------------------
+killall Dock 2>/dev/null || true
+killall Finder 2>/dev/null || true
+killall SystemUIServer 2>/dev/null || true
+
+echo "==> macOS defaults applied"
