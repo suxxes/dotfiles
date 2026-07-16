@@ -3,9 +3,11 @@ LICENSE
 .git
 .gitignore
 
-# Mac-only configs (1Password agent, Zed editor)
+# Mac-only configs (1Password agent, Zed editor, Ghostty)
 # {{ if ne .osType "darwin" }}
 .ssh/config
 .config/1Password/
 .config/zed/
+.config/ghostty/
+Library/Application Support/com.mitchellh.ghostty/
 # {{ end }}
