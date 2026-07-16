@@ -36,7 +36,6 @@ cask "appcleaner"
 cask "aws-vpn-client"
 cask "codex"
 cask "comet"
-cask "discord"
 cask "docker-desktop"
 cask "font-jetbrains-mono"
 cask "font-jetbrains-mono-nerd-font"
@@ -61,7 +60,6 @@ cask "zed@preview"
 mas "1Password for Safari", id: 1569813296
 mas "Amphetamine", id: 937984704
 mas "Developer", id: 640199958
-mas "Ivory", id: 6444602274
 mas "Keynote", id: 361285480
 mas "NextDNS", id: 1464122853
 mas "Numbers", id: 361304891
@@ -80,6 +78,8 @@ brew "supabase/tap/supabase"
 {{- end }}
 {{ if eq .profile "personal" -}}
 cask "blender"
+cask "discord"
 cask "godot"
 cask "tuist"
+mas "Ivory", id: 6444602274
 {{- end }}
