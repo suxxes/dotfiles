@@ -1,4 +1,4 @@
-<!-- Updated: 2026-06-17 15:58:24 UTC -->
+<!-- Updated: 2026-07-16 16:14:54 UTC -->
 
 # Dotfiles
 
@@ -12,6 +12,14 @@ Cross-machine dotfiles and secrets management using chezmoi with 1Password integ
 ### macOS
 
 ```bash
+# Homebrew (skip if already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Put brew on PATH for the current shell and future zsh sessions
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Bootstrap dotfiles
 brew install chezmoi fish tmux 1password-cli git
 op account add --address my.1password.com
 op signin
@@ -19,6 +27,8 @@ chezmoi init --apply https://github.com/suxxes/dotfiles
 echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
 chsh -s /opt/homebrew/bin/fish
 ```
+
+Once fish is your login shell, `dot_config/fish/conf.d/00-path.fish` re-runs `brew shellenv` on every shell start, so the `~/.zprofile` line is only relevant to any zsh session you keep open.
 
 ### Linux / LXD Host
 
@@ -40,6 +50,15 @@ export OP_SERVICE_ACCOUNT_TOKEN="ops_xxxxxxxxxxxxx"
 echo /usr/bin/fish | sudo tee -a /etc/shells
 chsh -s /usr/bin/fish
 ```
+
+### Profiles (work / personal)
+
+The chezmoi template data has a `profile` field that gates a few installs and templates (Brewfile blocks, secrets loader). Values: `work`, `personal`, or `default`.
+
+- **macOS**: `chezmoi init` prompts once via `.chezmoi.toml.tmpl` and stores the answer. Re-prompt with `chezmoi init` again if you want to change it.
+- **Linux / LXC**: create a file at `/.profile` (yes, at the filesystem root) containing the single word `work` or `personal`. Missing or empty → `default`. Chezmoi doesn't read this file directly; the install scripts do, so the file has to exist on the host before you run apply.
+
+Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates Railway/Render/Supabase; `personal` gates Blender/Godot/Tuist/Discord/Ivory), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
 
 ## Usage
 
