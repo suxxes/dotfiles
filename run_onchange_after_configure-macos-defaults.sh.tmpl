@@ -62,6 +62,39 @@ defaults write NSGlobalDomain NavPanelFileListModeForOpenMode -int 2
 # same location the Fontsmoothingadjuster cask writes.
 defaults -currentHost write -g AppleFontSmoothing -int 0
 
+# Fn key does nothing (0). Default is 1 = "Change Input Source".
+defaults write com.apple.HIToolbox AppleFnUsageType -int 0
+
+# ---- Keyboard shortcuts (symbolichotkeys) ------------------------------
+# Nested dicts with typed values under AppleSymbolicHotKeys. `defaults
+# write -dict-add '{...}'` stores every leaf as a string; the OS ignores
+# those. PlistBuddy preserves bool/int types.
+# Modifier masks: Cmd=1048576, Ctrl=262144, Shift=131072, Opt=524288,
+# Cmd+Shift=1179648, Cmd+Opt=1572864.
+# parameters = (char, keycode, modifier). Space char=32, keycode=49.
+# Changes take effect after next login (cfprefsd reload doesn't rebind).
+#   60 = previous input source  (disabled)
+#   61 = next input source      (Cmd+Space)
+#   64 = Show Spotlight         (Ctrl+Space)
+#   65 = Show Finder search     (disabled)
+SHK_PLIST="$HOME/Library/Preferences/com.apple.symbolichotkeys.plist"
+touch "$SHK_PLIST"
+plutil -convert xml1 "$SHK_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys dict" "$SHK_PLIST" 2>/dev/null || true
+for entry in "60|false|1179648" "61|true|1048576" "64|true|262144" "65|false|1572864"; do
+    IFS='|' read -r id enabled modifier <<< "$entry"
+    /usr/libexec/PlistBuddy -c "Delete :AppleSymbolicHotKeys:$id" "$SHK_PLIST" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id dict" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:enabled bool $enabled" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value dict" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value:parameters array" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value:parameters:0 integer 32" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value:parameters:1 integer 49" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value:parameters:2 integer $modifier" "$SHK_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :AppleSymbolicHotKeys:$id:value:type string standard" "$SHK_PLIST"
+done
+plutil -convert binary1 "$SHK_PLIST"
+
 # ---- Menu-bar clock (analog, with day-of-week; date hidden - Itsycal shows it)
 defaults write com.apple.menuextra.clock IsAnalog -bool true
 defaults write com.apple.menuextra.clock ShowDayOfWeek -bool true
@@ -88,9 +121,24 @@ defaults write net.freemacsoft.AppCleaner SmartDelete -bool true
 defaults write com.macpaw.site.theunarchiver extractionDestination -int 1  # same folder as archive
 defaults write com.macpaw.site.theunarchiver deleteExtractedArchive -bool true
 
+# ---- Sudo-gated system settings ---------------------------------------
+# Each write is idempotent. Wrapped in `|| echo WARNING` so sudo cancel
+# or a no-TTY invocation doesn't halt the script and skip the cleanup.
+
+# Mute startup chime (NVRAM). %01 = muted.
+sudo nvram StartupMute=%01 || \
+    echo "WARNING: sudo required for nvram StartupMute (skipped)" >&2
+
+# Disable "slightly dim display on battery" on laptops (no-op on desktops).
+if pmset -g custom 2>/dev/null | grep -q "^Battery Power:"; then
+    sudo pmset -b lessbright 0 || \
+        echo "WARNING: sudo required for pmset lessbright (skipped)" >&2
+fi
+
 # ---- Reload affected services -----------------------------------------
 killall Dock 2>/dev/null || true
 killall Finder 2>/dev/null || true
 killall SystemUIServer 2>/dev/null || true
+killall cfprefsd 2>/dev/null || true  # picks up symbolichotkeys changes
 
-echo "==> macOS defaults applied"
+echo "==> macOS defaults applied (log out and back in for keyboard shortcuts)"
