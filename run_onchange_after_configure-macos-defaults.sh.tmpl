@@ -44,6 +44,10 @@ defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 
+# Disable font smoothing entirely. Written to -currentHost (ByHost plist),
+# same location the Fontsmoothingadjuster cask writes.
+defaults -currentHost write -g AppleFontSmoothing -int 0
+
 # ---- Itsycal (menubar calendar) ----------------------------------------
 defaults write com.mowglii.ItsycalApp ClockFormat -string "MMMM d, hh:mm a"
 defaults write com.mowglii.ItsycalApp HideIcon -bool true
