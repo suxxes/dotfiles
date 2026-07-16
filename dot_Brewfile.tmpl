@@ -6,6 +6,7 @@ brew "bash"
 brew "bat"
 brew "chezmoi"
 brew "cloc"
+brew "container"
 brew "copilot"
 brew "fastfetch"
 brew "ffmpeg"
@@ -41,7 +42,6 @@ cask "font-jetbrains-mono"
 cask "font-jetbrains-mono-nerd-font"
 cask "fontsmoothingadjuster"
 cask "ghostty"
-cask "godot"
 cask "iina"
 cask "itsycal"
 cask "mongodb-compass"
@@ -77,4 +77,9 @@ tap "render-oss/render", trusted: true
 brew "render-oss/render/render"
 tap "supabase/tap", trusted: true
 brew "supabase/tap/supabase"
+{{- end }}
+{{ if eq .profile "personal" -}}
+cask "blender"
+cask "godot"
+cask "tuist"
 {{- end }}
