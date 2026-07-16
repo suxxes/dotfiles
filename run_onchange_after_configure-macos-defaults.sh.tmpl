@@ -20,6 +20,10 @@ defaults write com.apple.dock tilesize -int 128
 defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mru-spaces -bool false
 
+# Disable bottom-right hot corner (0 = no action; modifier value then moot).
+defaults write com.apple.dock wvous-br-corner -int 0
+defaults write com.apple.dock wvous-br-modifier -int 0
+
 # Ensure at least DOCK_SPACERS spacer tiles at the end of persistent-apps.
 # Idempotent: only tops up the shortfall so re-runs don't accumulate spacers.
 DOCK_SPACERS=10
@@ -44,9 +48,27 @@ defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 
+# Window / space behaviour
+defaults write NSGlobalDomain AppleMiniaturizeOnDoubleClick -bool false
+defaults write NSGlobalDomain AppleSpacesSwitchOnActivate -bool false
+defaults write NSGlobalDomain AppleKeyboardUIMode -int 2  # full keyboard access
+defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false
+defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false  # reverse natural scroll
+
+# File-open panels default to list view
+defaults write NSGlobalDomain NavPanelFileListModeForOpenMode -int 2
+
 # Disable font smoothing entirely. Written to -currentHost (ByHost plist),
 # same location the Fontsmoothingadjuster cask writes.
 defaults -currentHost write -g AppleFontSmoothing -int 0
+
+# ---- Menu-bar clock (analog, with day-of-week; date hidden - Itsycal shows it)
+defaults write com.apple.menuextra.clock IsAnalog -bool true
+defaults write com.apple.menuextra.clock ShowDayOfWeek -bool true
+defaults write com.apple.menuextra.clock ShowDate -int 0
+
+# ---- Accessibility -----------------------------------------------------
+defaults write com.apple.universalaccess reduceTransparency -bool true
 
 # ---- Itsycal (menubar calendar) ----------------------------------------
 defaults write com.mowglii.ItsycalApp ClockFormat -string "MMMM d, hh:mm a"
