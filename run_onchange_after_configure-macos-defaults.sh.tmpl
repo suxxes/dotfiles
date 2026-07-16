@@ -67,8 +67,10 @@ defaults write com.apple.menuextra.clock IsAnalog -bool true
 defaults write com.apple.menuextra.clock ShowDayOfWeek -bool true
 defaults write com.apple.menuextra.clock ShowDate -int 0
 
-# ---- Accessibility -----------------------------------------------------
-defaults write com.apple.universalaccess reduceTransparency -bool true
+# NOTE: com.apple.universalaccess is TCC-protected (Full Disk Access) on
+# modern macOS. Writing from a script fails in most contexts and, with
+# set -e, kills every command that follows. Toggle Reduce Transparency
+# manually in System Settings > Accessibility > Display.
 
 # ---- Itsycal (menubar calendar) ----------------------------------------
 defaults write com.mowglii.ItsycalApp ClockFormat -string "MMMM d, hh:mm a"
