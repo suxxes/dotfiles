@@ -5,6 +5,9 @@ brew "awscli"
 brew "bash"
 brew "bat"
 brew "chezmoi"
+{{ if and (eq .osType "darwin") (eq .profile "personal") -}}
+brew "cliproxyapi"
+{{- end }}
 brew "cloc"
 brew "container"
 brew "copilot"

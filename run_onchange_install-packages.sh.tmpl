@@ -1,6 +1,9 @@
 #!/bin/bash
 # chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
 # Runs when template hash changes
+# {{ if eq .osType "darwin" }}
+# Brewfile hash: # {{ include "dot_Brewfile.tmpl" | sha256sum }}
+# {{ end }}
 
 set -e
 

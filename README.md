@@ -75,6 +75,14 @@ chezmoi update                                              # Pull on other mach
 2. Update `dot_config/fish/conf.d/50-secrets.fish.tmpl`
 3. Push and run `chezmoi update` on all machines
 
+### Claude Code through CLIProxyAPI
+
+On personal-profile macOS machines, the Brewfile installs CLIProxyAPI and `run_after_setup-cliproxyapi.sh.tmpl` completes machine-local setup. Work-profile Macs and Linux machines skip the installation, setup, and `claudex` alias. Personal setup creates a unique API key, restricts the listener to `127.0.0.1`, starts the Homebrew service, and launches Codex OAuth when no credential exists.
+
+The API key lives at `~/.config/cliproxyapi/api-key`. Codex OAuth credentials live under `~/.cli-proxy-api/`. Both paths use private permissions and remain outside the dotfiles repository. A new Mac therefore requires one browser approval during its first `chezmoi apply`; later applies are non-interactive.
+
+After setup, run `claudex` to start Claude Code with `gpt-5.6-sol` through the local proxy.
+
 ## Troubleshooting
 
 ```bash
