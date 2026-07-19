@@ -137,6 +137,7 @@ permission_mode=false
 torben_fj_mode=false
 quick_search_mode=2
 select_flags=6
+simple_swap=false
 
 [Panelize]
 Find SUID and SGID programs=find . \\( \\( -perm -04000 -a -perm /011 \\) -o \\( -perm -02000 -a -perm /01 \\) \\) -print

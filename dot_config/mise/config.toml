@@ -4,4 +4,8 @@ not_found_auto_install = true
 idiomatic_version_file_enable_tools = ["node", "python"]
 
 [tools]
+bun = "latest"
 node = "26"
+python = "latest"
+ruby = "latest"
+rust = "latest"
