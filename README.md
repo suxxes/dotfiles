@@ -1,4 +1,4 @@
-<!-- Updated: 2026-07-16 16:14:54 UTC -->
+<!-- Updated: 2026-07-19 16:37:28 UTC -->
 
 # Dotfiles
 
@@ -77,11 +77,11 @@ chezmoi update                                              # Pull on other mach
 
 ### Claude Code through CLIProxyAPI
 
-On personal-profile macOS machines, the Brewfile installs CLIProxyAPI and `run_after_setup-cliproxyapi.sh.tmpl` completes machine-local setup. Work-profile Macs and Linux machines skip the installation, setup, and `claudex` alias. Personal setup creates a unique API key, restricts the listener to `127.0.0.1`, starts the Homebrew service, and launches Codex OAuth when no credential exists.
+On personal-profile macOS machines, the Brewfile installs CLIProxyAPI and `run_after_setup-cliproxyapi.sh.tmpl` completes machine-local setup. Work-profile Macs and Linux machines skip installation, setup, and `claudex` command. Personal setup creates a unique API key, restricts listener to `127.0.0.1`, starts Homebrew service, and launches Codex OAuth when no credential exists.
 
-The API key lives at `~/.config/cliproxyapi/api-key`. Codex OAuth credentials live under `~/.cli-proxy-api/`. Both paths use private permissions and remain outside the dotfiles repository. A new Mac therefore requires one browser approval during its first `chezmoi apply`; later applies are non-interactive.
+API key lives at `~/.config/cliproxyapi/api-key`. Codex OAuth credentials live under `~/.cli-proxy-api/`. Both paths use private permissions and remain outside dotfiles repository. New Mac therefore requires one browser approval during first `chezmoi apply`; later applies are non-interactive.
 
-After setup, run `claudex` to start Claude Code with `gpt-5.6-sol` through the local proxy.
+After setup, run `claudex` to start Claude Code with `gpt-5.6-sol` through local proxy. Wrapper strips Anthropic credentials from Claude Code subprocess environments.
 
 ## Troubleshooting
 
