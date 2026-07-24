@@ -36,7 +36,6 @@ cask "appcleaner"
 cask "aws-vpn-client"
 cask "codex"
 cask "comet"
-cask "docker-desktop"
 cask "font-jetbrains-mono"
 cask "font-jetbrains-mono-nerd-font"
 cask "fontsmoothingadjuster"
@@ -67,7 +66,7 @@ mas "Obsidian Web Clipper", id: 6720708363
 mas "Pages", id: 361309726
 mas "Pixelmator Pro", id: 1289583905
 mas "Telegram", id: 747648890
-mas "Xcode", id: 497799835
+mas "Xcode", id: 497799835 unless Dir.glob("/Applications/Xcode*.app").any?
 npm "agent-browser"
 {{ if eq .profile "work" -}}
 brew "railway"
