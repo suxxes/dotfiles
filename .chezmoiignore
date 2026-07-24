@@ -11,9 +11,3 @@ LICENSE
 .config/ghostty/
 Library/Application Support/com.mitchellh.ghostty/
 # {{ end }}
-
-# CLIProxyAPI is personal macOS only.
-# {{ if or (ne .osType "darwin") (ne .profile "personal") }}
-.local/bin/claudex
-setup-cliproxyapi.sh
-# {{ end }}
