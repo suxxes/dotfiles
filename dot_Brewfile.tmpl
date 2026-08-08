@@ -8,6 +8,7 @@ brew "chezmoi"
 brew "cloc"
 brew "container"
 brew "copilot"
+brew "curl"
 brew "fastfetch"
 brew "ffmpeg"
 brew "fish"
@@ -16,8 +17,10 @@ brew "gh"
 brew "git"
 brew "git-delta"
 brew "git-lfs"
+brew "grep"
 brew "htop"
 brew "jira-cli"
+brew "just"
 brew "lazygit"
 brew "lxc"
 brew "mas"
@@ -28,12 +31,14 @@ brew "rsync"
 brew "tmux"
 brew "tree"
 brew "wget"
+brew "yq"
 brew "tw93/tap/mole"
 cask "1password"
 cask "1password-cli"
 cask "android-studio"
 cask "appcleaner"
 cask "aws-vpn-client"
+cask "claude"
 cask "codex"
 cask "comet"
 cask "font-jetbrains-mono"
@@ -59,21 +64,30 @@ cask "zed@preview"
 mas "1Password for Safari", id: 1569813296
 mas "Amphetamine", id: 937984704
 mas "Developer", id: 640199958
-mas "Keynote", id: 361285480
+mas "Keynote", id: 409183694
 mas "NextDNS", id: 1464122853
-mas "Numbers", id: 361304891
+mas "Numbers", id: 409203825
 mas "Obsidian Web Clipper", id: 6720708363
-mas "Pages", id: 361309726
+mas "Pages", id: 409201541
 mas "Pixelmator Pro", id: 1289583905
 mas "Telegram", id: 747648890
 mas "Xcode", id: 497799835 unless Dir.glob("/Applications/Xcode*.app").any?
 npm "agent-browser"
 {{ if eq .profile "work" -}}
+brew "gitleaks"
+brew "helm"
+brew "kubernetes-cli"
+brew "netlify-cli"
 brew "railway"
+tap "natikgadzhi/taps", trusted: true
+brew "natikgadzhi/taps/slack-cli"
 tap "render-oss/render", trusted: true
 brew "render-oss/render/render"
 tap "supabase/tap", trusted: true
 brew "supabase/tap/supabase"
+cask "block-buzz"
+cask "docker-desktop"
+mas "Slack", id: 803453959
 {{- end }}
 {{ if eq .profile "personal" -}}
 cask "blender"
