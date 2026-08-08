@@ -91,6 +91,27 @@ if ! command -v ctop &> /dev/null; then
     rm /tmp/ctop
 fi
 
+# rtk (rtk-ai/rtk) - amd64 gets the .deb, arm64 gets the tarball
+if ! command -v rtk &> /dev/null; then
+    echo "==> Installing rtk"
+    case "$(uname -m)" in
+        x86_64)
+            curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk_amd64.deb" -o /tmp/rtk.deb
+            sudo dpkg -i /tmp/rtk.deb
+            rm -f /tmp/rtk.deb
+            ;;
+        aarch64|arm64)
+            curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-aarch64-unknown-linux-gnu.tar.gz" -o /tmp/rtk.tar.gz
+            tar -C /tmp -xzf /tmp/rtk.tar.gz
+            sudo install /tmp/rtk /usr/local/bin/rtk
+            rm -f /tmp/rtk.tar.gz /tmp/rtk
+            ;;
+        *)
+            echo "WARNING: Unsupported architecture for rtk: $(uname -m)"
+            ;;
+    esac
+fi
+
 # jira-cli (ankitpokhrel/jira-cli)
 if ! command -v jira &> /dev/null; then
     echo "==> Installing jira-cli"
