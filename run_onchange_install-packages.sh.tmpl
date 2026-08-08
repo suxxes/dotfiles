@@ -112,25 +112,6 @@ if ! command -v rtk &> /dev/null; then
     esac
 fi
 
-# jira-cli (ankitpokhrel/jira-cli)
-if ! command -v jira &> /dev/null; then
-    echo "==> Installing jira-cli"
-    JIRA_VERSION=$(curl -s "https://api.github.com/repos/ankitpokhrel/jira-cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    JIRA_ARCH=""
-    case "$(uname -m)" in
-        x86_64) JIRA_ARCH="x86_64" ;;
-        aarch64|arm64) JIRA_ARCH="arm64" ;;
-        *) echo "WARNING: Unsupported architecture for jira-cli: $(uname -m)" ;;
-    esac
-    if [ -n "$JIRA_ARCH" ]; then
-        JIRA_DIR="jira_${JIRA_VERSION}_linux_${JIRA_ARCH}"
-        curl -fsSL "https://github.com/ankitpokhrel/jira-cli/releases/download/v${JIRA_VERSION}/${JIRA_DIR}.tar.gz" -o /tmp/jira.tar.gz
-        tar -C /tmp -xzf /tmp/jira.tar.gz "${JIRA_DIR}/bin/jira"
-        sudo install "/tmp/${JIRA_DIR}/bin/jira" /usr/local/bin/jira
-        rm -rf /tmp/jira.tar.gz "/tmp/${JIRA_DIR}"
-    fi
-fi
-
 # GitHub CLI
 if ! command -v gh &> /dev/null; then
     echo "==> Installing GitHub CLI"
@@ -150,7 +131,26 @@ else
 fi
 
 if [ "$WORK_PROFILE" = "work" ]; then
-    echo "==> Installing work CLIs (railway, render, supabase)"
+    echo "==> Installing work CLIs (jira-cli, railway, render, supabase)"
+
+    # jira-cli (ankitpokhrel/jira-cli)
+    if ! command -v jira &> /dev/null; then
+        echo "==> Installing jira-cli"
+        JIRA_VERSION=$(curl -s "https://api.github.com/repos/ankitpokhrel/jira-cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+        JIRA_ARCH=""
+        case "$(uname -m)" in
+            x86_64) JIRA_ARCH="x86_64" ;;
+            aarch64|arm64) JIRA_ARCH="arm64" ;;
+            *) echo "WARNING: Unsupported architecture for jira-cli: $(uname -m)" ;;
+        esac
+        if [ -n "$JIRA_ARCH" ]; then
+            JIRA_DIR="jira_${JIRA_VERSION}_linux_${JIRA_ARCH}"
+            curl -fsSL "https://github.com/ankitpokhrel/jira-cli/releases/download/v${JIRA_VERSION}/${JIRA_DIR}.tar.gz" -o /tmp/jira.tar.gz
+            tar -C /tmp -xzf /tmp/jira.tar.gz "${JIRA_DIR}/bin/jira"
+            sudo install "/tmp/${JIRA_DIR}/bin/jira" /usr/local/bin/jira
+            rm -rf /tmp/jira.tar.gz "/tmp/${JIRA_DIR}"
+        fi
+    fi
 
     # Railway CLI
     if ! command -v railway &> /dev/null; then
