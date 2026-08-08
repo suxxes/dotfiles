@@ -55,7 +55,7 @@ chsh -s /usr/bin/fish
 
 The chezmoi template data has a `profile` field that gates a few installs and templates (Brewfile blocks, secrets loader). Values: `work`, `personal`, or `default`.
 
-- **macOS**: derived from the hostname by `.chezmoi.toml.tmpl`, never prompted. `uRetina` → `personal`, `kRetina` → `work`. An unrecognised Mac hostname fails `chezmoi init` with a message naming the host; add it to the map in `.chezmoi.toml.tmpl` rather than answering a prompt. Rename a machine and you must re-run `chezmoi init` for the new profile to take effect.
+- **macOS**: derived from the hostname by `.chezmoi.toml.tmpl`, never prompted. `uRetina` → `personal`, `kRetina` → `work`, `sRetina` → `work`. Matching is case-insensitive and reads `LocalHostName`, so set that (and `ComputerName`) when naming a new Mac. An unrecognised Mac hostname fails `chezmoi init` with a message naming the host; add it to the map in `.chezmoi.toml.tmpl` rather than answering a prompt. Rename a machine and you must re-run `chezmoi init` for the new profile to take effect.
 - **Linux / LXC**: create a file at `/.profile` (yes, at the filesystem root) containing the single word `work` or `personal`. Missing or empty → `default`. Chezmoi doesn't read this file directly; the install scripts do, so the file has to exist on the host before you run apply.
 
 Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
