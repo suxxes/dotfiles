@@ -1,4 +1,4 @@
-<!-- Updated: 2026-07-23 23:26:24 UTC -->
+<!-- Updated: 2026-08-08 15:40:41 UTC -->
 
 # Dotfiles
 
@@ -55,10 +55,16 @@ chsh -s /usr/bin/fish
 
 The chezmoi template data has a `profile` field that gates a few installs and templates (Brewfile blocks, secrets loader). Values: `work`, `personal`, or `default`.
 
-- **macOS**: `chezmoi init` prompts once via `.chezmoi.toml.tmpl` and stores the answer. Re-prompt with `chezmoi init` again if you want to change it.
+- **macOS**: derived from the hostname by `.chezmoi.toml.tmpl`, never prompted. `uRetina` → `personal`, `kRetina` → `work`. An unrecognised Mac hostname fails `chezmoi init` with a message naming the host; add it to the map in `.chezmoi.toml.tmpl` rather than answering a prompt. Rename a machine and you must re-run `chezmoi init` for the new profile to take effect.
 - **Linux / LXC**: create a file at `/.profile` (yes, at the filesystem root) containing the single word `work` or `personal`. Missing or empty → `default`. Chezmoi doesn't read this file directly; the install scripts do, so the file has to exist on the host before you run apply.
 
-Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates Railway/Render/Supabase; `personal` gates Blender/Godot/Tuist/Discord/Ivory), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
+Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
+
+Only `osType` and `profile` are exported as template data. Hostname is deliberately not: data is written once at `chezmoi init` and would go stale on rename, so templates read `.chezmoi.hostname` directly instead.
+
+### chezmoi versions
+
+macOS upgrades chezmoi through the Brewfile. Linux installs it once at bootstrap, so `run_onchange_install-packages.sh.tmpl` holds a `CHEZMOI_MIN_VERSION` floor and runs `chezmoi upgrade` on any host below it. Raise that floor to roll the fleet forward.
 
 ## Usage
 
@@ -78,8 +84,9 @@ chezmoi update                                              # Pull on other mach
 ## Troubleshooting
 
 ```bash
-chezmoi data | grep -E "(osType|machineType)"  # Check machine detection
+chezmoi data | grep -E "(osType|profile)"      # Check machine detection
 chezmoi apply --dry-run --verbose              # Dry run
-chezmoi execute-template '{{ .machineType }}'  # Debug templates
+chezmoi execute-template '{{ .profile }}'      # Debug templates
+chezmoi status                                 # Pending changes and scripts
 op read "op://Secrets/API Keys/GITHUB_TOKEN"   # Test 1Password access
 ```

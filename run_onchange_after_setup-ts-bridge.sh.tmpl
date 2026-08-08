@@ -5,11 +5,11 @@
 # B's upstream subnet router. veth + double MASQUERADE forwards between them.
 # All site-specific values come from 1Password; none are committed here.
 #
-# Hash: # {{ .bridge }} # {{ .hostname }}
+# Hash: # {{ .chezmoi.hostname }}
 
 set -euo pipefail
 
-# {{ if .bridge }}
+# {{ if eq .chezmoi.hostname "tailscale-bridge" }}
 echo "==> Configuring two-tailnet bridge (host: $(hostname))"
 
 NS="tsb"

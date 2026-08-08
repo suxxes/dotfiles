@@ -2,6 +2,14 @@ README.md
 LICENSE
 .git
 
+# Session scratch file, never a dotfile target.
+CHECKPOINT.json
+
+# CodexBar is personal macOS only.
+# {{ if or (ne .osType "darwin") (ne .profile "personal") }}
+.config/codexbar/
+# {{ end }}
+
 # Mac-only configs (1Password agent, Zed editor, Ghostty)
 # {{ if ne .osType "darwin" }}
 .ssh/config

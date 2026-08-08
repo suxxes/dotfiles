@@ -1,18 +1,26 @@
+{{- /* Profile is derived from the hostname rather than prompted, so a machine
+       resolves the same way on every init. Add new Macs to the map below.
+       hostname and bridge are deliberately not exported as data: they would
+       freeze at init time and go stale on rename. Templates read
+       .chezmoi.hostname directly instead. */ -}}
 {{- $osType := "linux" -}}
-{{- $hostname := .chezmoi.hostname -}}
 {{- $profile := "default" -}}
-{{- $bridge := eq .chezmoi.hostname "tailscale-bridge" -}}
 
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $osType = "darwin" -}}
-{{-   $profile = promptChoiceOnce . "profile" "Profile (work or personal)" (list "work" "personal") -}}
+{{-   $host := lower .chezmoi.hostname -}}
+{{-   if eq $host "uretina" -}}
+{{-     $profile = "personal" -}}
+{{-   else if eq $host "kretina" -}}
+{{-     $profile = "work" -}}
+{{-   else -}}
+{{-     fail (printf "unknown macOS host %q; add it to the hostname map in .chezmoi.toml.tmpl" .chezmoi.hostname) -}}
+{{-   end -}}
 {{- end -}}
 
 [data]
   osType = {{ $osType | quote }}
-  hostname = {{ $hostname | quote }}
   profile = {{ $profile | quote }}
-  bridge = {{ $bridge }}
 
 [onepassword]
   command = "op"
