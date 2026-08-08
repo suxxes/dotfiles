@@ -1,3 +1,6 @@
 # Never commit actual secrets
 *.secret
 .env
+
+# Session-only lifecycle state (checkpoint hook)
+CHECKPOINT.json

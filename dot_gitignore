@@ -2,6 +2,7 @@
 .idea
 .vscode
 .zed
+.claude
 .vim
 .viminfo
 *~
@@ -50,3 +51,9 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# Deploy tool caches
+.netlify
+
+# Local Postgres dumps
+*.pg
