@@ -70,6 +70,21 @@ if [ -d "$HOME/.local/bin" ]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# chezmoi. macOS gets it from the Brewfile; on Linux it is installed once at
+# bootstrap and would otherwise stay pinned to that version forever.
+CHEZMOI_MIN_VERSION="2.72.0"
+if ! command -v chezmoi &> /dev/null; then
+    echo "==> Installing chezmoi"
+    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+else
+    CHEZMOI_VERSION=$(chezmoi --version | sed -E 's/^chezmoi version v([0-9.]+).*/\1/')
+    OLDEST=$(printf '%s\n%s\n' "$CHEZMOI_MIN_VERSION" "$CHEZMOI_VERSION" | sort -V | head -1)
+    if [ "$OLDEST" != "$CHEZMOI_MIN_VERSION" ]; then
+        echo "==> Upgrading chezmoi ($CHEZMOI_VERSION -> >= $CHEZMOI_MIN_VERSION)"
+        chezmoi upgrade
+    fi
+fi
+
 # mise
 if ! command -v mise &> /dev/null; then
     curl https://mise.run | sh

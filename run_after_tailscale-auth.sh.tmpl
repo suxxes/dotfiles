@@ -5,7 +5,7 @@
 
 set -e
 
-# {{ if .bridge }}
+# {{ if eq .chezmoi.hostname "tailscale-bridge" }}
 exit 0
 # {{ end }}
 

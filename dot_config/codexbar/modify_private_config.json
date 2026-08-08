@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""Enforce which CodexBar providers are enabled without storing credentials.
+
+CodexBar keeps OAuth/API tokens under providers[].tokenAccounts in the same
+file it stores provider toggles in. Reading the live file on stdin and only
+flipping `enabled` keeps those tokens on the machine and out of the repo.
+"""
+
+import json
+import sys
+
+ENABLED = {"codex", "claude", "openrouter", "perplexity"}
+
+raw = sys.stdin.read().strip()
+config = json.loads(raw) if raw else {"version": 1, "providers": []}
+config.setdefault("version", 1)
+providers = config.setdefault("providers", [])
+
+for provider in providers:
+    provider["enabled"] = provider.get("id") in ENABLED
+
+known = {provider.get("id") for provider in providers}
+for provider_id in sorted(ENABLED - known):
+    providers.append({"id": provider_id, "enabled": True})
+
+json.dump(config, sys.stdout, indent=2)
+sys.stdout.write("\n")
