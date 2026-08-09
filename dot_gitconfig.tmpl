@@ -33,15 +33,19 @@
 ; Authenticate HTTPS remotes through the gh token rather than an agent or the
 ; keychain. The SSH path depends on 1Password's agent, which a non-interactive
 ; session cannot reach: a machine that could not sign was unable to fetch a tap
-; or push a branch at all. gh is named without a path so each machine resolves
-; its own; the empty helper first clears any inherited one so gh is the only
-; answer for these hosts.
+; or push a branch at all. The path is absolute because Homebrew scrubs PATH
+; before invoking git, so a bare gh resolves in a login shell and nowhere else;
+; the empty helper first clears any inherited one so gh is the only answer for
+; these hosts.
+# {{- $gh := lookPath "gh" }}
+# {{- if $gh }}
 [credential "https://github.com"]
 	helper =
-	helper = !gh auth git-credential
+	helper = !# {{ $gh }} auth git-credential
 [credential "https://gist.github.com"]
 	helper =
-	helper = !gh auth git-credential
+	helper = !# {{ $gh }} auth git-credential
+# {{- end }}
 [push]
 	autoSetupRemote = true
 [pull]
