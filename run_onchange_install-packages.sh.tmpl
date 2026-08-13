@@ -225,9 +225,9 @@ if [ "$WORK_PROFILE" = "work" ]; then
 fi
 # {{ end }}
 
-# Install global runtimes via mise (node, bun, python)
+# Install global runtimes via mise (node, bun, python, uv)
 if command -v mise &> /dev/null; then
-    for tool in node bun python; do
+    for tool in node bun python uv; do
         if ! mise exec -- "$tool" --version &> /dev/null; then
             echo "==> Installing global $tool via mise"
             mise use --global "$tool"
