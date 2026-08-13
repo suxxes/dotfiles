@@ -1,4 +1,4 @@
-<!-- Updated: 2026-08-08 15:40:41 UTC -->
+<!-- Updated: 2026-08-13 14:40:47 UTC -->
 
 # Dotfiles
 
@@ -58,9 +58,24 @@ The chezmoi template data has a `profile` field that gates a few installs and te
 - **macOS**: derived from the hostname by `.chezmoi.toml.tmpl`, never prompted. `uRetina` → `personal`, `kRetina` → `work`, `sRetina` → `work`. Matching is case-insensitive and reads `LocalHostName`, so set that (and `ComputerName`) when naming a new Mac. An unrecognised Mac hostname fails `chezmoi init` with a message naming the host; add it to the map in `.chezmoi.toml.tmpl` rather than answering a prompt. Rename a machine and you must re-run `chezmoi init` for the new profile to take effect.
 - **Linux / LXC**: create a file at `/.profile` (yes, at the filesystem root) containing the single word `work` or `personal`. Missing or empty → `default`. Chezmoi doesn't read this file directly; the install scripts do, so the file has to exist on the host before you run apply.
 
-Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
+Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only, claude-swap LaunchAgent is work macOS only), `run_onchange_after_setup-claude-swap.sh.tmpl` (work only, both platforms), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
 
 Only `osType` and `profile` are exported as template data. Hostname is deliberately not: data is written once at `chezmoi init` and would go stale on rename, so templates read `.chezmoi.hostname` directly instead.
+
+### claude-swap (work only)
+
+[claude-swap](https://github.com/realiti4/claude-swap) switches Claude Code between accounts before a rate limit lands. `run_onchange_after_setup-claude-swap.sh.tmpl` installs it with `uv tool install claude-swap`, sets `autoswitch.strategy` to `consume-first`, and starts the auto-switcher as a background service. Work profile only: template-gated on macOS, gated on the runtime `/.profile` file on Linux.
+
+- **macOS**: LaunchAgent `dev.suxxes.cswap-auto`, from `private_Library/private_LaunchAgents/dev.suxxes.cswap-auto.plist.tmpl`. Logs to `~/Library/Logs/cswap-auto.log`.
+- **Linux**: systemd user unit `cswap-auto.service`, written by the script and kept alive across logouts with `loginctl enable-linger`. Logs go to the journal (`journalctl --user -u cswap-auto`).
+
+On Linux the account store is shared, not container-local, and the LXD profile owns that mount. cswap keeps accounts in `~/.local/share/claude-swap`; the `development/work` profile writes `home-suxxes-.local-share-claude\x2dswap.mount`, binding it to `/mnt/shared-work/.claude-swap`, alongside the units it already writes for `~/.claude`, `~/.codex`, `~/.agents`, and `~/.pi`. The dotfiles do not create it. Every container runs its own auto-switcher; they coordinate through the shared cooldown and quarantine state and take the same credential locks, at the cost of one usage poller per container. macOS keeps its own store in the Keychain, separate from the volume.
+
+`consume-first` keeps you on the account whose weekly window resets soonest, so perishable quota is spent before it expires. Change it with `cswap config set autoswitch.strategy best`; the script rewrites the value on every apply.
+
+Cloud-init runs once, at first boot, so a profile change reaches new containers only. Add the mount unit to an existing container by hand, and give any other profile the same unit if its containers should share accounts.
+
+Accounts are not part of the dotfiles. Log into Claude Code with each account and run `cswap add` once per account, or restore them from an export with `cswap import <file>.cswap`. Run `cswap list` to see usage and which account is active.
 
 ### chezmoi versions
 

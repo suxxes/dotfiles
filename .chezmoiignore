@@ -10,6 +10,11 @@ CHECKPOINT.json
 .config/codexbar/
 # {{ end }}
 
+# claude-swap auto-switcher is work macOS only.
+# {{ if or (ne .osType "darwin") (ne .profile "work") }}
+Library/LaunchAgents/
+# {{ end }}
+
 # Mac-only configs (1Password agent, Zed editor, Ghostty)
 # {{ if ne .osType "darwin" }}
 .ssh/config

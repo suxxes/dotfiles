@@ -1,0 +1,90 @@
+#!/bin/bash
+# Installs claude-swap and runs its auto-switcher as a background service.
+# macOS: LaunchAgent. Linux: systemd user unit.
+{{ if eq .osType "darwin" -}}
+# Hash: {{ include "private_Library/private_LaunchAgents/dev.suxxes.cswap-auto.plist.tmpl" | sha256sum }}
+{{ end }}
+set -e
+
+{{ if eq .osType "darwin" -}}
+{{ if ne .profile "work" -}}
+exit 0
+{{ end -}}
+{{ else -}}
+# Linux reads the profile at runtime; chezmoi data always says "default" there.
+WORK_PROFILE_FILE="/.profile"
+if [ -f "$WORK_PROFILE_FILE" ]; then
+    WORK_PROFILE=$(cat "$WORK_PROFILE_FILE" | tr -d '[:space:]')
+else
+    WORK_PROFILE="default"
+fi
+if [ "$WORK_PROFILE" != "work" ]; then
+    exit 0
+fi
+{{ end }}
+CSWAP="$HOME/.local/bin/cswap"
+# uv installs claude-swap as a tool; mise owns uv, so read the path from mise
+# when the login shell PATH is not in scope.
+UV="$(command -v uv || true)"
+if [ -z "$UV" ] && command -v mise &> /dev/null; then
+    UV="$(mise which uv 2>/dev/null || true)"
+fi
+if [ -z "$UV" ]; then
+    echo "WARNING: uv not found; skipping claude-swap setup"
+    exit 0
+fi
+
+if "$UV" tool list 2>/dev/null | grep -q '^claude-swap '; then
+    echo "==> Upgrading claude-swap"
+    "$UV" tool upgrade claude-swap
+else
+    echo "==> Installing claude-swap"
+    "$UV" tool install claude-swap
+fi
+
+# consume-first burns the account whose weekly window resets soonest.
+echo "==> Setting claude-swap auto-switch strategy"
+"$CSWAP" config set autoswitch.strategy consume-first
+
+{{ if eq .osType "darwin" -}}
+echo "==> Loading claude-swap auto-switch agent"
+LABEL="dev.suxxes.cswap-auto"
+DOMAIN="gui/$(id -u)"
+if launchctl print "$DOMAIN/$LABEL" > /dev/null 2>&1; then
+    # bootout returns before the job is gone; bootstrap fails on the overlap.
+    launchctl bootout "$DOMAIN/$LABEL" 2> /dev/null || true
+    for _ in $(seq 1 20); do
+        launchctl print "$DOMAIN/$LABEL" > /dev/null 2>&1 || break
+        sleep 0.5
+    done
+fi
+launchctl bootstrap "$DOMAIN" "$HOME/Library/LaunchAgents/$LABEL.plist"
+launchctl print "$DOMAIN/$LABEL" | grep -E '^\s+state = '
+{{- else -}}
+if ! systemctl --user show-environment > /dev/null 2>&1; then
+    echo "WARNING: no systemd user session; claude-swap auto-switch not started"
+    exit 0
+fi
+
+echo "==> Installing claude-swap auto-switch unit"
+mkdir -p "$HOME/.config/systemd/user"
+tee "$HOME/.config/systemd/user/cswap-auto.service" > /dev/null <<UNIT
+[Unit]
+Description=claude-swap auto-switcher
+After=default.target
+
+[Service]
+ExecStart=$CSWAP auto
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=default.target
+UNIT
+
+# Linger keeps the unit running when no login session is open.
+sudo loginctl enable-linger "$USER" 2>/dev/null || true
+systemctl --user daemon-reload
+systemctl --user enable --now cswap-auto.service
+systemctl --user is-active cswap-auto.service
+{{- end }}
