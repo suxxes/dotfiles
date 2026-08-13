@@ -61,6 +61,10 @@ fi
 launchctl bootstrap "$DOMAIN" "$HOME/Library/LaunchAgents/$LABEL.plist"
 launchctl print "$DOMAIN/$LABEL" | grep -E '^\s+state = '
 {{- else -}}
+# cloud-init and lxc exec run without a user session, so the user manager has to
+# be started first. Linger does that, and keeps the switcher up after logout.
+sudo loginctl enable-linger "$USER"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 if ! systemctl --user show-environment > /dev/null 2>&1; then
     echo "WARNING: no systemd user session; claude-swap auto-switch not started"
     exit 0
@@ -82,8 +86,6 @@ RestartSec=60
 WantedBy=default.target
 UNIT
 
-# Linger keeps the unit running when no login session is open.
-sudo loginctl enable-linger "$USER" 2>/dev/null || true
 systemctl --user daemon-reload
 systemctl --user enable --now cswap-auto.service
 systemctl --user is-active cswap-auto.service
