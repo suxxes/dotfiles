@@ -1,0 +1,76 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Install and update codor-memory. Runs on every apply and no-ops fast when
+# the installed version already matches the latest release.
+#
+# macOS installs through the Brewfile (suxxes/tap/codor-memory); this script
+# only covers Linux instances, where the release tarball is fetched from the
+# private repository with the GitHub token every machine carries.
+
+set -e
+
+# {{ if eq .osType "darwin" }}
+exit 0
+# {{ end }}
+
+# usakura is the LXD host, not a managed dev container; skip container tooling.
+# {{ if eq .chezmoi.hostname "usakura" }}
+echo "==> usakura host: skipping codor-memory"
+exit 0
+# {{ end }}
+
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "==> codor-memory: GITHUB_TOKEN is not set; cannot reach the private release. Skipping."
+    exit 0
+fi
+
+api="https://api.github.com/repos/suxxes/codor-memory/releases/latest"
+auth="Authorization: token ${GITHUB_TOKEN}"
+
+latest=$(curl -fsSL -H "$auth" "$api" | grep -Po '"tag_name": "v\K[^"]*')
+if [ -z "$latest" ]; then
+    echo "==> codor-memory: could not read the latest release tag. Skipping."
+    exit 0
+fi
+
+installed=""
+if command -v codor-memory &> /dev/null; then
+    installed=$(codor-memory --version | awk '{print $2}')
+fi
+
+if [ "$installed" != "$latest" ]; then
+    echo "==> codor-memory: installing ${latest} (installed: ${installed:-none})"
+    asset="codor-memory-${latest}-x86_64-unknown-linux-gnu.tar.gz"
+    asset_id=$(curl -fsSL -H "$auth" "$api" \
+        | grep -B3 "\"name\": \"${asset}\"" | grep -Po '"id": \K[0-9]+' | head -1)
+    if [ -z "$asset_id" ]; then
+        echo "==> codor-memory: release ${latest} has no ${asset}. Skipping."
+        exit 0
+    fi
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL -H "$auth" -H "Accept: application/octet-stream" \
+        "https://api.github.com/repos/suxxes/codor-memory/releases/assets/${asset_id}" \
+        -o /tmp/codor-memory.tar.gz
+    tar -xzf /tmp/codor-memory.tar.gz -C "$HOME/.local/bin" codor-memory
+    chmod +x "$HOME/.local/bin/codor-memory"
+    rm -f /tmp/codor-memory.tar.gz
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# Extraction tools the daemon would otherwise name as missing at launch.
+# ffmpeg is already in the base package list; whisper has no package and
+# speech transcription stays reported as unavailable, which is correct.
+sudo apt-get install -y poppler-utils libheif-examples yt-dlp > /dev/null
+
+# A user systemd unit needs the user manager alive without an open session.
+sudo loginctl enable-linger "$USER" 2>/dev/null || true
+
+codor-memory daemon install
+
+# Ingest what this machine already holds: index existing transcripts so past
+# sessions are searchable from the first hour. Incremental, so re-running on
+# later applies only touches what changed.
+codor-memory index-sessions || echo "==> codor-memory: session indexing reported a problem; the daemon will retry"
+
+codor-memory daemon status | grep -E "Version|Media tools" || true
