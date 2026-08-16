@@ -15,11 +15,13 @@ CHECKPOINT.json
 Library/LaunchAgents/
 # {{ end }}
 
-# Mac-only configs (1Password agent, Zed editor, Ghostty)
+# Mac-only configs (1Password agent, Zed editor, Ghostty) and the whole
+# ~/Library tree: ignoring only files inside it still creates the parent
+# directories on Linux.
 # {{ if ne .osType "darwin" }}
 .ssh/config
 .config/1Password/
 .config/zed/
 .config/ghostty/
-Library/Application Support/com.mitchellh.ghostty/
+Library/
 # {{ end }}
