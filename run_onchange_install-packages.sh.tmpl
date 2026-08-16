@@ -117,25 +117,22 @@ if ! command -v ctop &> /dev/null; then
     rm /tmp/ctop
 fi
 
-# rtk (rtk-ai/rtk) - amd64 gets the .deb, arm64 gets the tarball
+# rtk (rtk-ai/rtk) - release tarball. The amd64 .deb wants a newer glibc
+# than Ubuntu 22.04 has; the x86_64 tarball is musl and runs anywhere.
 if ! command -v rtk &> /dev/null; then
     echo "==> Installing rtk"
+    RTK_TARGET=""
     case "$(uname -m)" in
-        x86_64)
-            curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk_amd64.deb" -o /tmp/rtk.deb
-            sudo dpkg -i /tmp/rtk.deb
-            rm -f /tmp/rtk.deb
-            ;;
-        aarch64|arm64)
-            curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-aarch64-unknown-linux-gnu.tar.gz" -o /tmp/rtk.tar.gz
-            tar -C /tmp -xzf /tmp/rtk.tar.gz
-            sudo install /tmp/rtk /usr/local/bin/rtk
-            rm -f /tmp/rtk.tar.gz /tmp/rtk
-            ;;
-        *)
-            echo "WARNING: Unsupported architecture for rtk: $(uname -m)"
-            ;;
+        x86_64) RTK_TARGET="x86_64-unknown-linux-musl" ;;
+        aarch64|arm64) RTK_TARGET="aarch64-unknown-linux-gnu" ;;
+        *) echo "WARNING: Unsupported architecture for rtk: $(uname -m)" ;;
     esac
+    if [ -n "$RTK_TARGET" ]; then
+        curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-${RTK_TARGET}.tar.gz" -o /tmp/rtk.tar.gz
+        tar -C /tmp -xzf /tmp/rtk.tar.gz
+        sudo install /tmp/rtk /usr/local/bin/rtk
+        rm -f /tmp/rtk.tar.gz /tmp/rtk
+    fi
 fi
 
 # GitHub CLI
