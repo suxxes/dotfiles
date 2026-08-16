@@ -1,0 +1,14 @@
+#!/bin/bash
+# Writes ~/.chezmoi-profile from the legacy /.profile root marker, once per
+# machine. The root file stays: deleting it needs sudo, and it is inert once
+# the home marker exists.
+
+set -e
+
+{{ if ne .osType "linux" -}}
+exit 0
+{{ end -}}
+if [ -f /.profile ] && [ ! -f "$HOME/.chezmoi-profile" ]; then
+    tr -d '[:space:]' < /.profile > "$HOME/.chezmoi-profile"
+    echo "Migrated profile marker: /.profile -> ~/.chezmoi-profile"
+fi

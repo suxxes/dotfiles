@@ -42,9 +42,15 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gp
   sudo tee /etc/apt/sources.list.d/1password.list
 sudo apt update && sudo apt install -y 1password-cli
 
-# chezmoi
+# 1Password service-account token: persisted so every future fish shell
+# loads it, then exported for the scripts this bootstrap runs
+mkdir -p ~/.config/op
+printf '%s\n' 'ops_xxxxxxxxxxxxx' > ~/.config/op/service-account-token
+chmod 600 ~/.config/op/service-account-token
+export OP_SERVICE_ACCOUNT_TOKEN="$(cat ~/.config/op/service-account-token)"
+
+# chezmoi; init asks for the profile (work / personal / default) once
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
-export OP_SERVICE_ACCOUNT_TOKEN="ops_xxxxxxxxxxxxx"
 ~/.local/bin/chezmoi init --apply https://github.com/suxxes/dotfiles
 
 echo /usr/bin/fish | sudo tee -a /etc/shells
@@ -55,8 +61,13 @@ chsh -s /usr/bin/fish
 
 The chezmoi template data has a `profile` field that gates a few installs and templates (Brewfile blocks, secrets loader). Values: `work`, `personal`, or `default`.
 
-- **macOS**: derived from the hostname by `.chezmoi.toml.tmpl`, never prompted. `uRetina` → `personal`, `kRetina` → `work`, `sRetina` → `work`. Matching is case-insensitive and reads `LocalHostName`, so set that (and `ComputerName`) when naming a new Mac. An unrecognised Mac hostname fails `chezmoi init` with a message naming the host; add it to the map in `.chezmoi.toml.tmpl` rather than answering a prompt. Rename a machine and you must re-run `chezmoi init` for the new profile to take effect.
-- **Linux / LXC**: create a file at `/.profile` (yes, at the filesystem root) containing the single word `work` or `personal`. Missing or empty → `default`. Chezmoi doesn't read this file directly; the install scripts do, so the file has to exist on the host before you run apply.
+`.chezmoi.toml.tmpl` resolves the profile the same way on every OS, in this order:
+
+1. `~/.chezmoi-profile` — a file containing the single word `work` or `personal`. Present but empty → `default`.
+2. `/.profile` at the filesystem root — the legacy marker, kept for the existing LXC fleet. Same semantics. On the next apply, `run_once_after_migrate-profile-marker.sh.tmpl` copies its value into `~/.chezmoi-profile`, after which the root file is inert.
+3. A one-time prompt. The answer persists in the generated config, so only the first `chezmoi init` on a machine asks. Unattended init with no marker must pre-answer with `chezmoi init --promptString profile=work`; without a TTY the prompt fails instead of falling back.
+
+Any value outside `work` / `personal` / `default` fails `chezmoi init`. Markers are read at init, not apply: edit one (or change the prompt answer via `--promptString`) and re-run `chezmoi init` for it to take effect. Machines set up before the prompt existed keep their profile — the prompt reuses the value already in the config.
 
 Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only, claude-swap LaunchAgent is work macOS only), `run_onchange_after_setup-claude-swap.sh.tmpl` (work only, both platforms), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
 
@@ -64,7 +75,7 @@ Only `osType` and `profile` are exported as template data. Hostname is deliberat
 
 ### claude-swap (work only)
 
-[claude-swap](https://github.com/realiti4/claude-swap) switches Claude Code between accounts before a rate limit lands. `run_onchange_after_setup-claude-swap.sh.tmpl` installs it with `uv tool install claude-swap`, sets `autoswitch.strategy` to `consume-first`, and starts the auto-switcher as a background service. Work profile only: template-gated on macOS, gated on the runtime `/.profile` file on Linux.
+[claude-swap](https://github.com/realiti4/claude-swap) switches Claude Code between accounts before a rate limit lands. `run_onchange_after_setup-claude-swap.sh.tmpl` installs it with `uv tool install claude-swap`, sets `autoswitch.strategy` to `consume-first`, and starts the auto-switcher as a background service. Work profile only, template-gated on both platforms.
 
 - **macOS**: LaunchAgent `dev.suxxes.cswap-auto`, from `private_Library/private_LaunchAgents/dev.suxxes.cswap-auto.plist.tmpl`. Logs to `~/Library/Logs/cswap-auto.log`.
 - **Linux**: systemd user unit `cswap-auto.service`, written by the script and kept alive across logouts with `loginctl enable-linger`. Logs go to the journal (`journalctl --user -u cswap-auto`).

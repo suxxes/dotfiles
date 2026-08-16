@@ -1,27 +1,28 @@
-{{- /* Profile is derived from the hostname rather than prompted, so a machine
-       resolves the same way on every init. Add new Macs to the map below.
+{{- /* Profile resolution, same on every OS: the ~/.chezmoi-profile marker,
+       then the legacy /.profile root marker (kept for the existing LXC
+       fleet), then a one-time prompt whose answer persists in the generated
+       config. A marker that exists but is empty means default. Unattended
+       init needs a marker or `--promptString profile=...`; without a TTY the
+       prompt blocks, it does not fall back. Edit a marker and re-run
+       `chezmoi init` for it to take effect.
        hostname and bridge are deliberately not exported as data: they would
        freeze at init time and go stale on rename. Templates read
        .chezmoi.hostname directly instead. */ -}}
-{{- $osType := "linux" -}}
-{{- $profile := "default" -}}
-
-{{- if eq .chezmoi.os "darwin" -}}
-{{-   $osType = "darwin" -}}
-{{-   $host := lower .chezmoi.hostname -}}
-{{-   if eq $host "uretina" -}}
-{{-     $profile = "personal" -}}
-{{-   else if eq $host "kretina" -}}
-{{-     $profile = "work" -}}
-{{-   else if eq $host "sretina" -}}
-{{-     $profile = "work" -}}
-{{-   else -}}
-{{-     fail (printf "unknown macOS host %q; add it to the hostname map in .chezmoi.toml.tmpl" .chezmoi.hostname) -}}
-{{-   end -}}
+{{- $profile := "" -}}
+{{- $homeMarker := joinPath .chezmoi.homeDir ".chezmoi-profile" -}}
+{{- if stat $homeMarker -}}
+{{-   $profile = trim (output "cat" $homeMarker) | default "default" -}}
+{{- else if stat "/.profile" -}}
+{{-   $profile = trim (output "cat" "/.profile") | default "default" -}}
+{{- else -}}
+{{-   $profile = promptStringOnce . "profile" "profile" "default" -}}
+{{- end -}}
+{{- if not (has $profile (list "work" "personal" "default")) -}}
+{{-   fail (printf "unknown profile %q; use work, personal, or default" $profile) -}}
 {{- end -}}
 
 [data]
-  osType = {{ $osType | quote }}
+  osType = {{ .chezmoi.os | quote }}
   profile = {{ $profile | quote }}
 
 [onepassword]

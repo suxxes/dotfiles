@@ -137,13 +137,8 @@ if ! command -v gh &> /dev/null; then
     sudo apt install -y gh
 fi
 
-# Work-only CLIs (railway, render, supabase) - gated on runtime profile
-WORK_PROFILE_FILE="/.profile"
-if [ -f "$WORK_PROFILE_FILE" ]; then
-    WORK_PROFILE=$(cat "$WORK_PROFILE_FILE" | tr -d '[:space:]')
-else
-    WORK_PROFILE="default"
-fi
+# Work-only CLIs (railway, render, supabase)
+WORK_PROFILE="# {{ .profile }}"
 
 if [ "$WORK_PROFILE" = "work" ]; then
     echo "==> Installing work CLIs (jira-cli, railway, render, supabase)"
