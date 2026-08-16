@@ -30,11 +30,22 @@ echo "==> Linux: Installing packages"
 sudo apt update
 sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client xdg-utils xz-utils ripgrep ffmpeg age
 
-# fastfetch
+# fastfetch, from the GitHub release deb. The PPA needed add-apt-repository,
+# which imports apt_pkg and breaks on hosts whose default python3 is not the
+# distro build (Lambda-stack images ship 3.12 on Ubuntu 22.04).
 if ! command -v fastfetch &> /dev/null; then
-    sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
-    sudo apt update
-    sudo apt install -y fastfetch
+    echo "==> Installing fastfetch"
+    FASTFETCH_ARCH=""
+    case "$(dpkg --print-architecture)" in
+        amd64) FASTFETCH_ARCH="amd64" ;;
+        arm64) FASTFETCH_ARCH="aarch64" ;;
+        *) echo "WARNING: Unsupported architecture for fastfetch: $(dpkg --print-architecture)" ;;
+    esac
+    if [ -n "$FASTFETCH_ARCH" ]; then
+        curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-${FASTFETCH_ARCH}.deb" -o /tmp/fastfetch.deb
+        sudo apt install -y /tmp/fastfetch.deb
+        rm /tmp/fastfetch.deb
+    fi
 fi
 
 # bat
