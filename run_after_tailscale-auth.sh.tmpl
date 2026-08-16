@@ -32,12 +32,7 @@ if ! command -v op &> /dev/null; then
     exit 0
 fi
 
-PROFILE_TYPE_FILE="/.profile"
-if [ -f "$PROFILE_TYPE_FILE" ]; then
-    TS_PROFILE_TYPE=$(cat "$PROFILE_TYPE_FILE" | tr -d '[:space:]')
-else
-    TS_PROFILE_TYPE="default"
-fi
+TS_PROFILE_TYPE="# {{ .profile }}"
 
 if [ "$TS_PROFILE_TYPE" = "work" ]; then
     TS_VAULTS=("Secrets" "Secrets: Work")

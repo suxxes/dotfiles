@@ -6,22 +6,9 @@
 {{ end }}
 set -e
 
-{{ if eq .osType "darwin" -}}
 {{ if ne .profile "work" -}}
 exit 0
 {{ end -}}
-{{ else -}}
-# Linux reads the profile at runtime; chezmoi data always says "default" there.
-WORK_PROFILE_FILE="/.profile"
-if [ -f "$WORK_PROFILE_FILE" ]; then
-    WORK_PROFILE=$(cat "$WORK_PROFILE_FILE" | tr -d '[:space:]')
-else
-    WORK_PROFILE="default"
-fi
-if [ "$WORK_PROFILE" != "work" ]; then
-    exit 0
-fi
-{{ end }}
 CSWAP="$HOME/.local/bin/cswap"
 # uv installs claude-swap as a tool; mise owns uv, so read the path from mise
 # when the login shell PATH is not in scope.
