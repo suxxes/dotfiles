@@ -1,4 +1,4 @@
-<!-- Updated: 2026-08-13 14:40:47 UTC -->
+<!-- Updated: 2026-08-16 11:44:55 UTC -->
 
 # Dotfiles
 
@@ -43,8 +43,10 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gp
 sudo apt update && sudo apt install -y 1password-cli
 
 # 1Password service-account token: persisted so every future fish shell
-# loads it, then exported for the scripts this bootstrap runs
+# loads it, then exported for the scripts this bootstrap runs.
+# op refuses to run if ~/.config/op is looser than 700.
 mkdir -p ~/.config/op
+chmod 700 ~/.config/op
 printf '%s\n' 'ops_xxxxxxxxxxxxx' > ~/.config/op/service-account-token
 chmod 600 ~/.config/op/service-account-token
 export OP_SERVICE_ACCOUNT_TOKEN="$(cat ~/.config/op/service-account-token)"
@@ -114,5 +116,5 @@ chezmoi data | grep -E "(osType|profile)"      # Check machine detection
 chezmoi apply --dry-run --verbose              # Dry run
 chezmoi execute-template '{{ .profile }}'      # Debug templates
 chezmoi status                                 # Pending changes and scripts
-op read "op://Secrets/API Keys/GITHUB_TOKEN"   # Test 1Password access
+op read "op://Secrets/Github/GITHUB_TOKEN" | wc -c   # Test 1Password access without printing the token
 ```
