@@ -1,0 +1,81 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Install and update crust. Runs on every apply and no-ops fast when the
+# installed release already matches the latest one.
+#
+# macOS installs through the Brewfile (suxxes/tap/crust); this script only
+# covers Linux instances, where the release tarball is fetched from the private
+# repository with the GitHub token every machine carries.
+#
+# crust forwards --version to the Claude CLI it launches, so it cannot report
+# its own version. The installed release is recorded in a stamp file instead.
+
+set -e
+
+# {{ if eq .osType "darwin" }}
+exit 0
+# {{ end }}
+
+# usakura is the LXD host, not a managed dev container; skip container tooling.
+# {{ if eq .chezmoi.hostname "usakura" }}
+echo "==> usakura host: skipping crust"
+exit 0
+# {{ end }}
+
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "==> crust: GITHUB_TOKEN is not set; cannot reach the private release. Skipping."
+    exit 0
+fi
+
+case "$(uname -m)" in
+    x86_64) CRUST_TRIPLE="x86_64-unknown-linux-gnu" ;;
+    aarch64|arm64) CRUST_TRIPLE="aarch64-unknown-linux-gnu" ;;
+    *)
+        echo "==> crust: unsupported architecture $(uname -m). Skipping."
+        exit 0
+        ;;
+esac
+
+api="https://api.github.com/repos/suxxes/crust/releases/latest"
+auth="Authorization: token ${GITHUB_TOKEN}"
+stamp="$HOME/.local/share/crust/release-tag"
+
+latest=$(curl -fsSL -H "$auth" "$api" | grep -Po '"tag_name": "v\K[^"]*')
+if [ -z "$latest" ]; then
+    echo "==> crust: could not read the latest release tag. Skipping."
+    exit 0
+fi
+
+installed=""
+if [ -x "$HOME/.local/bin/crust" ] && [ -f "$stamp" ]; then
+    installed=$(cat "$stamp")
+fi
+
+if [ "$installed" = "$latest" ]; then
+    exit 0
+fi
+
+echo "==> crust: installing ${latest} (installed: ${installed:-none})"
+asset="crust-${latest}-${CRUST_TRIPLE}.tar.gz"
+asset_id=$(curl -fsSL -H "$auth" "$api" \
+    | grep -B3 "\"name\": \"${asset}\"" | grep -Po '"id": \K[0-9]+' | head -1)
+if [ -z "$asset_id" ]; then
+    echo "==> crust: release ${latest} has no ${asset}. Skipping."
+    exit 0
+fi
+
+mkdir -p "$HOME/.local/bin" "$(dirname "$stamp")"
+curl -fsSL -H "$auth" -H "Accept: application/octet-stream" \
+    "https://api.github.com/repos/suxxes/crust/releases/assets/${asset_id}" \
+    -o /tmp/crust.tar.gz
+
+# A running crust supervisor holds its binary open, and a write to that path
+# fails with "Text file busy". Unpack beside the target and rename over it: the
+# rename replaces the directory entry and the live process keeps its own inode.
+tar -xzOf /tmp/crust.tar.gz crust > "$HOME/.local/bin/.crust.new"
+chmod +x "$HOME/.local/bin/.crust.new"
+mv -f "$HOME/.local/bin/.crust.new" "$HOME/.local/bin/crust"
+rm -f /tmp/crust.tar.gz
+
+echo "$latest" > "$stamp"
+echo "==> crust: ${latest} installed. A running session keeps the old binary until it restarts."
