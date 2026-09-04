@@ -10,3 +10,7 @@ python = "latest"
 ruby = "latest"
 rust = "latest"
 uv = "latest"
+# git cow-worktree add: reflink checkout for new worktrees. The fish git wrapper
+# and the Claude WorktreeCreate hook both call it. The go: backend builds it.
+go = "latest"
+"go:github.com/josharian/git-cow-worktree" = "latest"
