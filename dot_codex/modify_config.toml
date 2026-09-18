@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Pins top-level keys and whole tables in ~/.codex/config.toml, keeping the rest.
+# [shell_environment_policy.set] makes agent commits sign with the passphrase-free
+# LXC key through ssh-keygen, so signing never waits on the 1Password agent.
 
 import re
 import sys
@@ -16,57 +19,70 @@ top = {
     "approvals_reviewer": '"user"',
     "sandbox_mode": '"danger-full-access"',
 }
-features = {
-    "multi_agent": "true",
-    "hooks": "true",
-    "js_repl": "true",
-    "guardian_approval": "true",
-    "terminal_resize_reflow": "true",
-    "memories": "false",
-    "goals": "true",
+tables = {
+    "features": {
+        "multi_agent": "true",
+        "hooks": "true",
+        "js_repl": "true",
+        "guardian_approval": "true",
+        "terminal_resize_reflow": "true",
+        "memories": "false",
+        "goals": "true",
+    },
+    "shell_environment_policy.set": {
+        "GIT_CONFIG_COUNT": '"2"',
+        "GIT_CONFIG_KEY_0": '"user.signingkey"',
+        "GIT_CONFIG_VALUE_0": '"~/.ssh/id_ed25519.pub"',
+        "GIT_CONFIG_KEY_1": '"gpg.ssh.program"',
+        "GIT_CONFIG_VALUE_1": '"ssh-keygen"',
+    },
 }
+
+
+def key_pattern(keys):
+    return re.compile(r"^\s*(" + "|".join(re.escape(key) for key in keys) + r")\s*=")
+
+
+def trim_blank_tail(block):
+    while block and not block[-1].strip():
+        block.pop()
+    return block
+
+
+def pin_table(rest, name, values):
+    """Replaces the pinned keys inside [name], appending the table when absent."""
+    header = f"[{name}]"
+    start = next((i for i, line in enumerate(rest) if line.strip() == header), None)
+    if start is None:
+        if rest and rest[-1].strip():
+            rest.append("")
+        rest.append(header)
+        rest.extend(f"{key} = {value}" for key, value in values.items())
+        return rest
+    end = next(
+        (i for i in range(start + 1, len(rest)) if re.match(r"^\s*\[", rest[i])),
+        len(rest),
+    )
+    pattern = key_pattern(values)
+    section = trim_blank_tail(
+        [line for line in rest[start + 1 : end] if not pattern.match(line)]
+    )
+    section.extend(f"{key} = {value}" for key, value in values.items())
+    section.append("")
+    return rest[: start + 1] + section + rest[end:]
+
+
 first_table = next(
     (index for index, line in enumerate(lines) if re.match(r"^\s*\[", line)),
     len(lines),
 )
-top_pattern = re.compile(
-    r"^\s*(" + "|".join(re.escape(key) for key in top) + r")\s*="
+top_pattern = key_pattern(top)
+head = trim_blank_tail(
+    [line for line in lines[:first_table] if not top_pattern.match(line)]
 )
-head = [line for line in lines[:first_table] if not top_pattern.match(line)]
-while head and not head[-1].strip():
-    head.pop()
 head.extend(f"{key} = {value}" for key, value in top.items())
 head.append("")
 rest = lines[first_table:]
-feature_start = next(
-    (index for index, line in enumerate(rest) if line.strip() == "[features]"),
-    None,
-)
-if feature_start is None:
-    if rest and rest[-1].strip():
-        rest.append("")
-    rest.append("[features]")
-    rest.extend(f"{key} = {value}" for key, value in features.items())
-else:
-    feature_end = next(
-        (
-            index
-            for index in range(feature_start + 1, len(rest))
-            if re.match(r"^\s*\[", rest[index])
-        ),
-        len(rest),
-    )
-    feature_pattern = re.compile(
-        r"^\s*(" + "|".join(re.escape(key) for key in features) + r")\s*="
-    )
-    section = [
-        line
-        for line in rest[feature_start + 1 : feature_end]
-        if not feature_pattern.match(line)
-    ]
-    while section and not section[-1].strip():
-        section.pop()
-    section.extend(f"{key} = {value}" for key, value in features.items())
-    section.append("")
-    rest = rest[: feature_start + 1] + section + rest[feature_end:]
+for name, values in tables.items():
+    rest = pin_table(rest, name, values)
 sys.stdout.write("\n".join(head + rest).rstrip() + "\n")

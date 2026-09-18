@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# Pins env entries in ~/.claude/settings.json, keeping every other key as is.
+# The GIT_CONFIG entries make agent commits sign with the passphrase-free LXC key
+# through ssh-keygen, so signing never waits on the 1Password agent.
+
+import json
+import sys
+
+
+env = {
+    "GIT_CONFIG_COUNT": "2",
+    "GIT_CONFIG_KEY_0": "user.signingkey",
+    "GIT_CONFIG_VALUE_0": "~/.ssh/id_ed25519.pub",
+    "GIT_CONFIG_KEY_1": "gpg.ssh.program",
+    "GIT_CONFIG_VALUE_1": "ssh-keygen",
+}
+
+text = sys.stdin.read()
+settings = json.loads(text) if text.strip() else {}
+settings.setdefault("env", {}).update(env)
+sys.stdout.write(json.dumps(settings, indent=2) + "\n")
