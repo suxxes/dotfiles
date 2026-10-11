@@ -4,6 +4,7 @@
 # {{ if eq .osType "darwin" }}
 # Brewfile hash: # {{ include "dot_Brewfile.tmpl" | sha256sum }}
 # {{ end }}
+# mise config hash: # {{ include "dot_config/mise/config.toml.tmpl" | sha256sum }}
 
 set -e
 
@@ -29,52 +30,6 @@ brew bundle install --file="$HOME/.Brewfile"
 echo "==> Linux: Installing packages"
 sudo apt update
 sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client xdg-utils xz-utils ripgrep ffmpeg age
-
-# fastfetch, from the GitHub release deb. The PPA needed add-apt-repository,
-# which imports apt_pkg and breaks on hosts whose default python3 is not the
-# distro build (Lambda-stack images ship 3.12 on Ubuntu 22.04).
-if ! command -v fastfetch &> /dev/null; then
-    echo "==> Installing fastfetch"
-    FASTFETCH_ARCH=""
-    case "$(dpkg --print-architecture)" in
-        amd64) FASTFETCH_ARCH="amd64" ;;
-        arm64) FASTFETCH_ARCH="aarch64" ;;
-        *) echo "WARNING: Unsupported architecture for fastfetch: $(dpkg --print-architecture)" ;;
-    esac
-    if [ -n "$FASTFETCH_ARCH" ]; then
-        curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-${FASTFETCH_ARCH}.deb" -o /tmp/fastfetch.deb
-        sudo apt install -y /tmp/fastfetch.deb
-        rm /tmp/fastfetch.deb
-    fi
-fi
-
-# bat
-if ! command -v bat &> /dev/null; then
-    echo "==> Installing bat"
-    BAT_VERSION=$(curl -s "https://api.github.com/repos/sharkdp/bat/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -fsSL "https://github.com/sharkdp/bat/releases/download/v${BAT_VERSION}/bat_${BAT_VERSION}_amd64.deb" -o /tmp/bat.deb
-    sudo dpkg -i /tmp/bat.deb
-    rm /tmp/bat.deb
-fi
-
-# git-delta
-if ! command -v delta &> /dev/null; then
-    echo "==> Installing git-delta"
-    DELTA_VERSION=$(curl -s "https://api.github.com/repos/dandavison/delta/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
-    curl -fsSL "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/git-delta_${DELTA_VERSION}_amd64.deb" -o /tmp/delta.deb
-    sudo dpkg -i /tmp/delta.deb
-    rm /tmp/delta.deb
-fi
-
-# lazygit
-if ! command -v lazygit &> /dev/null; then
-    echo "==> Installing lazygit"
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_linux_x86_64.tar.gz" -o /tmp/lazygit.tar.gz
-    tar -C /tmp -xzf /tmp/lazygit.tar.gz lazygit
-    sudo install /tmp/lazygit /usr/local/bin
-    rm /tmp/lazygit.tar.gz /tmp/lazygit
-fi
 
 # Ensure ~/.local/bin is in PATH (sudo clears it, chezmoi may inherit sanitized PATH)
 if [ -d "$HOME/.local/bin" ]; then
@@ -107,136 +62,11 @@ if ! command -v tailscale &> /dev/null; then
     echo "==> Installing Tailscale"
     curl -fsSL https://tailscale.com/install.sh | sh
 fi
-
-# ctop
-if ! command -v ctop &> /dev/null; then
-    echo "==> Installing ctop"
-    CTOP_VERSION=$(curl -s "https://api.github.com/repos/bcicen/ctop/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -fsSL "https://github.com/bcicen/ctop/releases/download/v${CTOP_VERSION}/ctop-${CTOP_VERSION}-linux-amd64" -o /tmp/ctop
-    sudo install /tmp/ctop /usr/local/bin
-    rm /tmp/ctop
-fi
-
-# rtk (rtk-ai/rtk) - release tarball. The amd64 .deb wants a newer glibc
-# than Ubuntu 22.04 has; the x86_64 tarball is musl and runs anywhere.
-if ! command -v rtk &> /dev/null; then
-    echo "==> Installing rtk"
-    RTK_TARGET=""
-    case "$(uname -m)" in
-        x86_64) RTK_TARGET="x86_64-unknown-linux-musl" ;;
-        aarch64|arm64) RTK_TARGET="aarch64-unknown-linux-gnu" ;;
-        *) echo "WARNING: Unsupported architecture for rtk: $(uname -m)" ;;
-    esac
-    if [ -n "$RTK_TARGET" ]; then
-        curl -fsSL "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-${RTK_TARGET}.tar.gz" -o /tmp/rtk.tar.gz
-        tar -C /tmp -xzf /tmp/rtk.tar.gz
-        sudo install /tmp/rtk /usr/local/bin/rtk
-        rm -f /tmp/rtk.tar.gz /tmp/rtk
-    fi
-fi
-
-# GitHub CLI
-if ! command -v gh &> /dev/null; then
-    echo "==> Installing GitHub CLI"
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-    sudo apt update
-    sudo apt install -y gh
-fi
-
-# Work-only CLIs (railway, render, supabase)
-WORK_PROFILE="# {{ .profile }}"
-
-if [ "$WORK_PROFILE" = "work" ]; then
-    echo "==> Installing work CLIs (jira-cli, railway, render, supabase)"
-
-    # jira-cli (ankitpokhrel/jira-cli)
-    if ! command -v jira &> /dev/null; then
-        echo "==> Installing jira-cli"
-        JIRA_VERSION=$(curl -s "https://api.github.com/repos/ankitpokhrel/jira-cli/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-        JIRA_ARCH=""
-        case "$(uname -m)" in
-            x86_64) JIRA_ARCH="x86_64" ;;
-            aarch64|arm64) JIRA_ARCH="arm64" ;;
-            *) echo "WARNING: Unsupported architecture for jira-cli: $(uname -m)" ;;
-        esac
-        if [ -n "$JIRA_ARCH" ]; then
-            JIRA_DIR="jira_${JIRA_VERSION}_linux_${JIRA_ARCH}"
-            curl -fsSL "https://github.com/ankitpokhrel/jira-cli/releases/download/v${JIRA_VERSION}/${JIRA_DIR}.tar.gz" -o /tmp/jira.tar.gz
-            tar -C /tmp -xzf /tmp/jira.tar.gz "${JIRA_DIR}/bin/jira"
-            sudo install "/tmp/${JIRA_DIR}/bin/jira" /usr/local/bin/jira
-            rm -rf /tmp/jira.tar.gz "/tmp/${JIRA_DIR}"
-        fi
-    fi
-
-    # Railway CLI
-    if ! command -v railway &> /dev/null; then
-        echo "==> Installing Railway CLI"
-        RAILWAY_VERSION=$(curl -s "https://api.github.com/repos/railwayapp/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
-        RAILWAY_TARGET=""
-        case "$(uname -m)" in
-            x86_64) RAILWAY_TARGET="x86_64-unknown-linux-musl" ;;
-            aarch64|arm64) RAILWAY_TARGET="aarch64-unknown-linux-musl" ;;
-            *) echo "WARNING: Unsupported architecture for Railway CLI: $(uname -m)" ;;
-        esac
-        if [ -n "$RAILWAY_TARGET" ]; then
-            RAILWAY_TARBALL="railway-v${RAILWAY_VERSION}-${RAILWAY_TARGET}.tar.gz"
-            curl -fsSL "https://github.com/railwayapp/cli/releases/download/v${RAILWAY_VERSION}/${RAILWAY_TARBALL}" -o /tmp/railway.tar.gz
-            tar -C /tmp -xzf /tmp/railway.tar.gz railway
-            sudo install /tmp/railway /usr/local/bin/railway
-            rm -f /tmp/railway.tar.gz /tmp/railway
-        fi
-    fi
-
-    # Render CLI
-    if ! command -v render &> /dev/null; then
-        echo "==> Installing Render CLI"
-        RENDER_VERSION=$(curl -s "https://api.github.com/repos/render-oss/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
-        RENDER_ARCH=""
-        case "$(uname -m)" in
-            x86_64) RENDER_ARCH="amd64" ;;
-            aarch64|arm64) RENDER_ARCH="arm64" ;;
-            *) echo "WARNING: Unsupported architecture for Render CLI: $(uname -m)" ;;
-        esac
-        if [ -n "$RENDER_ARCH" ]; then
-            RENDER_ZIP="cli_${RENDER_VERSION}_linux_${RENDER_ARCH}.zip"
-            curl -fsSL "https://github.com/render-oss/cli/releases/download/v${RENDER_VERSION}/${RENDER_ZIP}" -o /tmp/render.zip
-            unzip -oq /tmp/render.zip "cli_v${RENDER_VERSION}" -d /tmp
-            sudo install "/tmp/cli_v${RENDER_VERSION}" /usr/local/bin/render
-            rm -f /tmp/render.zip "/tmp/cli_v${RENDER_VERSION}"
-        fi
-    fi
-
-    # Supabase CLI
-    if ! command -v supabase &> /dev/null; then
-        echo "==> Installing Supabase CLI"
-        SUPABASE_VERSION=$(curl -s "https://api.github.com/repos/supabase/cli/releases/latest" | grep -Po '"tag_name":\s*"v\K[^"]*')
-        SUPABASE_ARCH=""
-        case "$(uname -m)" in
-            x86_64) SUPABASE_ARCH="amd64" ;;
-            aarch64|arm64) SUPABASE_ARCH="arm64" ;;
-            *) echo "WARNING: Unsupported architecture for Supabase CLI: $(uname -m)" ;;
-        esac
-        if [ -n "$SUPABASE_ARCH" ]; then
-            SUPABASE_DEB="supabase_${SUPABASE_VERSION}_linux_${SUPABASE_ARCH}.deb"
-            curl -fsSL "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/${SUPABASE_DEB}" -o /tmp/supabase.deb
-            sudo dpkg -i /tmp/supabase.deb
-            rm -f /tmp/supabase.deb
-        fi
-    fi
-fi
 # {{ end }}
 
-# Install global runtimes via mise (node, bun, python, uv)
-if command -v mise &> /dev/null; then
-    for tool in node bun python uv; do
-        if ! mise exec -- "$tool" --version &> /dev/null; then
-            echo "==> Installing global $tool via mise"
-            mise use --global "$tool"
-        fi
-    done
-fi
+# Runtimes and cross-platform CLIs: everything listed in ~/.config/mise/config.toml.
+echo "==> Installing mise tools"
+mise install --yes
 
 # Install Oh My Fish
 if [ ! -d "$HOME/.local/share/omf" ]; then
@@ -244,64 +74,10 @@ if [ ! -d "$HOME/.local/share/omf" ]; then
     curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish --command 'source - --noninteractive --yes'
 fi
 
-# Install Claude Code
-if ! command -v claude &> /dev/null; then
-    echo "==> Installing Claude Code"
-    curl -fsLS https://claude.ai/install.sh | bash
-fi
-
-# Install Codex CLI (macOS handled via Brewfile)
-# {{ if ne .osType "darwin" }}
-if ! command -v codex &> /dev/null; then
-    echo "==> Installing Codex CLI"
-    CODEX_ARCHIVE=""
-    case "$(uname -m)" in
-        x86_64)
-            CODEX_ARCHIVE="codex-x86_64-unknown-linux-musl.tar.gz"
-            ;;
-        aarch64|arm64)
-            CODEX_ARCHIVE="codex-aarch64-unknown-linux-musl.tar.gz"
-            ;;
-        *)
-            echo "WARNING: Unsupported architecture for Codex CLI install: $(uname -m)"
-            ;;
-    esac
-
-    if [ -n "$CODEX_ARCHIVE" ]; then
-        CODEX_BIN="${CODEX_ARCHIVE%.tar.gz}"
-        CODEX_URL="https://github.com/openai/codex/releases/latest/download/${CODEX_ARCHIVE}"
-
-        if curl -fsSL "$CODEX_URL" -o "/tmp/${CODEX_ARCHIVE}"; then
-            if tar -C /tmp -xzf "/tmp/${CODEX_ARCHIVE}" "${CODEX_BIN}"; then
-                if ! sudo install "/tmp/${CODEX_BIN}" /usr/local/bin/codex; then
-                    echo "WARNING: Failed to install Codex CLI binary"
-                fi
-            else
-                echo "WARNING: Failed to extract Codex CLI archive"
-            fi
-            rm -f "/tmp/${CODEX_ARCHIVE}" "/tmp/${CODEX_BIN}"
-        else
-            echo "WARNING: Failed to download Codex CLI archive"
-        fi
-    fi
-fi
-# {{ end }}
-
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup
 
 # Tailscale auth: handled by run_after_tailscale-auth.sh.tmpl (runs every apply)
-
-# Install AWS CLI v2 (macOS handled via Brewfile)
-# {{ if ne .osType "darwin" }}
-if ! command -v aws &> /dev/null; then
-    echo "==> Installing AWS CLI v2"
-    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-    unzip -q /tmp/awscliv2.zip -d /tmp
-    sudo /tmp/aws/install
-    rm -rf /tmp/awscliv2.zip /tmp/aws
-fi
-# {{ end }}
 
 # Install Session Manager plugin (macOS handled via Brewfile)
 # {{ if ne .osType "darwin" }}

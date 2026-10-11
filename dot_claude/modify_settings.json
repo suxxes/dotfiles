@@ -2,12 +2,14 @@
 # Pins env entries in ~/.claude/settings.json, keeping every other key as is.
 # The GIT_CONFIG entries make agent commits sign with the passphrase-free LXC key
 # through ssh-keygen, so signing never waits on the 1Password agent.
+# DISABLE_AUTOUPDATER: mise owns the claude binary, so claude must not replace it.
 
 import json
 import sys
 
 
 env = {
+    "DISABLE_AUTOUPDATER": "1",
     "GIT_CONFIG_COUNT": "2",
     "GIT_CONFIG_KEY_0": "user.signingkey",
     "GIT_CONFIG_VALUE_0": "~/.ssh/id_ed25519.pub",
