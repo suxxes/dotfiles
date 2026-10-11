@@ -4,6 +4,9 @@
 
 set -e
 
+# mise owns the binary; put its shims on PATH for a fresh host whose shell never activated mise.
+eval "$(mise activate bash --shims)"
+
 if command -v claude &> /dev/null; then
     echo "==> Configuring Claude Code plugins"
 

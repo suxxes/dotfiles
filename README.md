@@ -71,7 +71,7 @@ The chezmoi template data has a `profile` field that gates a few installs and te
 
 Any value outside `work` / `personal` / `default` fails `chezmoi init`. Markers are read at init, not apply: edit one (or change the prompt answer via `--promptString`) and re-run `chezmoi init` for it to take effect. Machines set up before the prompt existed keep their profile — the prompt reuses the value already in the config.
 
-Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work CLIs and casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), `.chezmoiignore` (CodexBar config is personal macOS only, claude-swap LaunchAgent is work macOS only), `run_onchange_after_setup-claude-swap.sh.tmpl` (work only, both platforms), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
+Consumers today: the Brewfile (`{{ if eq .profile "work" }}` gates the work casks; `personal` gates Blender/CodexBar/Discord/Godot/Steam/Tuist), the mise config (`work` adds jira-cli), `.chezmoiignore` (CodexBar config is personal macOS only, claude-swap LaunchAgent is work macOS only), `run_onchange_after_setup-claude-swap.sh.tmpl` (work only, both platforms), and `run_after_generate-secrets.sh.tmpl` (chooses which 1Password vault the Tailscale auth key comes from).
 
 Only `osType` and `profile` are exported as template data. Hostname is deliberately not: data is written once at `chezmoi init` and would go stale on rename, so templates read `.chezmoi.hostname` directly instead.
 

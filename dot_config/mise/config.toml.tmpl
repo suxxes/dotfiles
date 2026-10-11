@@ -1,0 +1,33 @@
+[settings]
+experimental = true
+not_found_auto_install = true
+idiomatic_version_file_enable_tools = ["node", "python"]
+
+[tools]
+bun = "latest"
+node = "24"
+python = "latest"
+ruby = "latest"
+rust = "latest"
+uv = "latest"
+# git cow-worktree add: reflink checkout for new worktrees. The fish git wrapper
+# and the Claude WorktreeCreate hook both call it. The go: backend builds it.
+go = "latest"
+"go:github.com/josharian/git-cow-worktree" = "latest"
+
+# Cross-platform CLIs. mise owns these on every host, so the Brewfile and the
+# Linux install script carry no copy. aqua verifies release checksums.
+bat = "latest"
+claude = "latest"
+codex = "latest"
+delta = "latest"
+fastfetch = "latest"
+gh = "latest"
+lazygit = "latest"
+rtk = "latest"
+{{- if ne .osType "darwin" }}
+ctop = "latest"
+{{- end }}
+{{- if eq .profile "work" }}
+"github:ankitpokhrel/jira-cli" = "latest"
+{{- end }}

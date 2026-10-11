@@ -1,0 +1,43 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Removes the Homebrew, apt, and hand-installed copies of tools that mise owns now,
+# plus the dropped railway, render, supabase, and netlify CLIs. Runs once per host.
+
+set -e
+
+# {{ if eq .chezmoi.hostname "usakura" }}
+exit 0
+# {{ end }}
+
+# {{ if eq .osType "darwin" }}
+echo "==> Removing Homebrew copies of mise-owned tools"
+for formula in bat fastfetch gh git-delta lazygit rtk-ai/tap/rtk jira-cli netlify-cli railway render-oss/render/render supabase/tap/supabase; do
+    if brew list --formula "$formula" &> /dev/null; then
+        brew uninstall --ignore-dependencies "$formula"
+    fi
+done
+if brew list --cask codex &> /dev/null; then
+    brew uninstall --cask codex
+fi
+for tap in rtk-ai/tap render-oss/render supabase/tap; do
+    if brew tap | grep -qx "$tap"; then
+        brew untap "$tap"
+    fi
+done
+# {{ else }}
+echo "==> Removing hand-installed copies of mise-owned tools"
+sudo rm -f /usr/local/bin/lazygit /usr/local/bin/ctop /usr/local/bin/rtk /usr/local/bin/codex \
+    /usr/local/bin/jira /usr/local/bin/railway /usr/local/bin/render
+for pkg in bat git-delta fastfetch supabase gh; do
+    if dpkg -s "$pkg" &> /dev/null; then
+        sudo apt remove -y "$pkg"
+    fi
+done
+# {{ end }}
+
+# Claude Code native installer: ~/.local/bin/claude symlink into ~/.local/share/claude/versions.
+if [ -L "$HOME/.local/bin/claude" ]; then
+    echo "==> Removing native Claude Code install"
+    rm "$HOME/.local/bin/claude"
+    rm -r "$HOME/.local/share/claude"
+fi
