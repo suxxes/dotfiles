@@ -357,13 +357,92 @@ def test_prompt_keeps_runtime_versions_outside_projects_and_private_failure_info
     )
     zsh_startup.spy("python", output="Python 3.13.7\n")
     result = zsh_startup.run(
-        "unset HISTFILE; zsh-prompt-context; starship prompt --status=1 --jobs=2",
+        'unset HISTFILE; zsh-prompt-context; print -Pnr -- "$(starship prompt --status=1 --jobs=2)"',
         interactive=True,
     )
     assert result.returncode == 0, result.stderr
     assert result.stderr == ""
-    for expected in ("24.1.2", "3.3.8", "3.13.7", "private", "!", "%", "~"):
+    for expected in (
+        "\x1b[48;2;88;91;112;38;2;242;205;205m  private ",
+        "\x1b[1;38;2;250;179;135m % ",
+        "\x1b[38;2;243;139;168m ! ",
+        f"\x1b[48;2;88;91;112;38;2;249;226;175m {os.uname().nodename.split('.')[0]} ",
+        (
+            "\x1b[1;48;2;243;139;168;38;2;24;24;37m  3.3.8 "
+            "\x1b[48;2;250;179;135m  3.13.7 "
+            "\x1b[48;2;166;227;161m  24.1.2 \x1b[0m"
+            "\x1b[48;2;49;50;68;38;2;205;214;244m ~ \x1b[0m"
+        ),
+    ):
         assert expected in result.stdout
+    assert result.stdout.endswith("\x1b[0m ")
+
+
+@pytest.mark.parametrize(
+    "state, symbol", [("clean", ""), ("modified", ""), ("staged", "")]
+)
+def test_prompt_keeps_git_branch_blocks_and_change_indicators(
+    zsh_startup: ZshStartupSandbox, state: str, symbol: str
+) -> None:
+    repo = zsh_startup.home / "project"
+    repo.mkdir()
+    git = ["git", "-C", str(repo)]
+    for args in (
+        ["init", "--initial-branch=main"],
+        [
+            "-c",
+            "user.name=Prompt test",
+            "-c",
+            "user.email=prompt@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "Fixture",
+        ],
+    ):
+        subprocess.run(git + args, check=True, capture_output=True, timeout=10)
+    if state != "clean":
+        tracked = repo / "tracked"
+        tracked.write_text("original\n")
+        subprocess.run(
+            git + ["add", "tracked"], check=True, capture_output=True, timeout=10
+        )
+        if state == "modified":
+            subprocess.run(
+                git
+                + [
+                    "-c",
+                    "user.name=Prompt test",
+                    "-c",
+                    "user.email=prompt@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-m",
+                    "Track fixture",
+                ],
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+            tracked.write_text("changed\n")
+    nested = repo / "nested"
+    nested.mkdir()
+    result = zsh_startup.run("cd ~/project/nested; starship prompt")
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+    assert "\x1b[48;2;166;227;161;38;2;24;24;37m  main " in result.stdout
+    assert (
+        "\x1b[48;2;49;50;68;38;2;205;214;244m ~/"
+        "\x1b[1mproject\x1b[0m"
+        "\x1b[48;2;49;50;68;38;2;205;214;244m/nested "
+    ) in result.stdout
+    if symbol:
+        background = "243;139;168" if state == "modified" else "249;226;175"
+        assert f"\x1b[48;2;{background}m {symbol} " in result.stdout
+    assert result.stdout.endswith("\x1b[0m ")
 
 
 def test_login_shell_keeps_local_environment_and_is_silent(
