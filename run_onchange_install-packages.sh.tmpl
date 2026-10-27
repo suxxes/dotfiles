@@ -29,7 +29,7 @@ brew bundle install --file="$HOME/.Brewfile"
 # {{ else }}
 echo "==> Linux: Installing packages"
 sudo apt update
-sudo apt install -y fish tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client xdg-utils xz-utils ripgrep ffmpeg age
+sudo apt install -y zsh tmux mc htop git curl unzip fontconfig fzf git-lfs postgresql-client xdg-utils xz-utils ripgrep ffmpeg age
 
 # Ensure ~/.local/bin is in PATH (sudo clears it, chezmoi may inherit sanitized PATH)
 if [ -d "$HOME/.local/bin" ]; then
@@ -67,12 +67,6 @@ fi
 # Runtimes and cross-platform CLIs: everything listed in ~/.config/mise/config.toml.
 echo "==> Installing mise tools"
 mise install --yes
-
-# Install Oh My Fish
-if [ ! -d "$HOME/.local/share/omf" ]; then
-    echo "==> Installing Oh My Fish"
-    curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish --command 'source - --noninteractive --yes'
-fi
 
 # Note: Claude credentials sync is handled by bind mount in cloud-init
 # See cloud-init.vendor-data in LXD profile for automatic setup

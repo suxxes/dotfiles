@@ -1,0 +1,8 @@
+# Login path_helper runs after .zshenv on macOS.
+source "$XDG_CONFIG_HOME/zsh/shell-path.zsh" || exit $?
+if [[ -f "$XDG_CONFIG_HOME/zsh/local-env.zsh" ]]; then
+    source "$XDG_CONFIG_HOME/zsh/local-env.zsh" || exit $?
+fi
+
+# Login path restoration must not outrank the selected runtime.
+_mise_hook --force || exit $?

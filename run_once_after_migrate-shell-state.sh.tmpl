@@ -1,0 +1,9 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Keep fish state for open sessions while importing it into zsh.
+set -e
+
+# {{ if ne .chezmoi.hostname "usakura" }}
+"$HOME/.local/bin/migrate-fish-state"
+"$HOME/.local/bin/migrate-fish-history"
+# {{ end }}

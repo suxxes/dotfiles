@@ -1,0 +1,141 @@
+add_newline = false
+palette = 'mocha'
+format = '${custom.root}${custom.private}$jobs$status$hostname${env_var.STY}${env_var.DOCKER_MACHINE_NAME}$nix_shell${env_var.DESK_ENV}$ruby$golang$python${env_var.VIRTUALGO}${custom.node}$directory$git_branch$git_commit$git_state$git_status$character'
+right_format = ''
+
+[palettes.mocha]
+base = '#1e1e2e'
+text = '#cdd6f4'
+blue = '#89b4fa'
+green = '#a6e3a1'
+yellow = '#f9e2af'
+red = '#f38ba8'
+mauve = '#cba6f7'
+peach = '#fab387'
+lavender = '#b4befe'
+
+[hostname]
+ssh_only = false
+format = '[$hostname ]($style)'
+style = 'lavender'
+
+[directory]
+truncation_length = 0
+truncate_to_repo = false
+format = '[$path]($style)[$read_only]($read_only_style) '
+style = 'blue'
+read_only = ' '
+read_only_style = 'red'
+
+[git_branch]
+format = '[$symbol$branch ]($style)'
+symbol = ' '
+style = 'mauve'
+
+[git_commit]
+only_detached = true
+format = '[$hash$tag ]($style)'
+style = 'mauve'
+tag_disabled = false
+
+[git_state]
+format = '[\($state( $progress_current/$progress_total)\) ]($style)'
+style = 'yellow'
+
+[git_status]
+format = '([$all_status$ahead_behind]($style) )'
+style = 'peach'
+untracked = ''
+modified = ''
+staged = ''
+stashed = ''
+ahead = '+'
+behind = '-'
+diverged = '±'
+
+[status]
+disabled = false
+format = '[$symbol ]($style)'
+symbol = '!'
+style = 'red'
+map_symbol = false
+
+[jobs]
+format = '[$symbol ]($style)'
+symbol = '%'
+style = 'yellow'
+
+[character]
+success_symbol = ''
+error_symbol = ''
+
+[ruby]
+detect_extensions = []
+detect_files = []
+detect_folders = []
+detect_variables = ['PATH']
+format = '[$symbol$version ]($style)'
+version_format = '${raw}'
+symbol = ' '
+style = 'red'
+
+[python]
+detect_extensions = []
+detect_files = []
+detect_folders = []
+detect_env_vars = ['PATH']
+python_binary = ['python']
+format = '[$symbol$version ]($style)'
+version_format = '${raw}'
+symbol = ' '
+style = 'yellow'
+
+[golang]
+format = '[$symbol$version ]($style)'
+version_format = '${raw}'
+symbol = ' '
+style = 'green'
+not_capable_style = 'red'
+
+[nix_shell]
+format = '[$symbol$state( \($name\)) ]($style)'
+symbol = ' '
+style = 'blue'
+
+[env_var.STY]
+format = '[$env_value ]($style)'
+style = 'mauve'
+
+[env_var.DOCKER_MACHINE_NAME]
+format = '[$env_value ]($style)'
+style = 'blue'
+
+[env_var.DESK_ENV]
+format = '[$env_value ]($style)'
+style = 'green'
+
+[env_var.VIRTUALGO]
+format = '[ $env_value ]($style)'
+style = 'green'
+
+[custom.node]
+command = 'node --version | cut -c 2-'
+when = 'command -v node >/dev/null 2>&1'
+shell = ['zsh', '-f']
+format = '[$symbol$output ]($style)'
+symbol = ' '
+style = 'green'
+
+[custom.root]
+when = 'test "$(id -u)" -eq 0'
+command = 'printf "$"'
+shell = ['zsh', '-f']
+format = '[$output ]($style)'
+style = 'red'
+
+[custom.private]
+when = 'test "${ZSH_HISTORY_DISABLED-}" = 1'
+command = 'printf "private"'
+shell = ['zsh', '-f']
+format = '[ $output ]($style)'
+style = 'mauve'

@@ -1,4 +1,4 @@
-<!-- Updated: 2026-08-16 11:44:55 UTC -->
+<!-- Updated: 2026-10-27 13:45:43 UTC -->
 
 # Dotfiles
 
@@ -20,20 +20,19 @@ echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # Bootstrap dotfiles
-brew install chezmoi fish tmux 1password-cli git
+brew install chezmoi tmux 1password-cli git
 op account add --address my.1password.com
 op signin
 chezmoi init --apply https://github.com/suxxes/dotfiles
-echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
-chsh -s /opt/homebrew/bin/fish
+chsh -s /bin/zsh
 ```
 
-Once fish is your login shell, `dot_config/fish/conf.d/00-path.fish` re-runs `brew shellenv` on every shell start, so the `~/.zprofile` line is only relevant to any zsh session you keep open.
+Zsh loads shared environment settings, Homebrew, and mise in `.zshenv`. Login startup restores path priority; interactive startup loads completions and the prompt.
 
 ### Linux / LXD Host
 
 ```bash
-sudo apt update && sudo apt install -y fish git curl unzip
+sudo apt update && sudo apt install -y zsh git curl unzip
 
 # 1Password CLI
 curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
@@ -42,7 +41,7 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gp
   sudo tee /etc/apt/sources.list.d/1password.list
 sudo apt update && sudo apt install -y 1password-cli
 
-# 1Password service-account token: persisted so every future fish shell
+# 1Password service-account token: persisted so every future zsh shell
 # loads it, then exported for the scripts this bootstrap runs.
 # op refuses to run if ~/.config/op is looser than 700.
 mkdir -p ~/.config/op
@@ -55,9 +54,29 @@ export OP_SERVICE_ACCOUNT_TOKEN="$(cat ~/.config/op/service-account-token)"
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
 ~/.local/bin/chezmoi init --apply https://github.com/suxxes/dotfiles
 
-echo /usr/bin/fish | sudo tee -a /etc/shells
-chsh -s /usr/bin/fish
+chsh -s /usr/bin/zsh
 ```
+
+### Switch an existing fish account
+
+Chezmoi installs pinned zsh plugins and checks their archive checksums. Mise installs the Starship prompt. The state step copies exported universal fish variables, user paths, and saved history into zsh files. It keeps the fish files and does not replace existing zsh secret exports. The import renames the credential export `USERNAME` to `CREDENTIAL_USERNAME`. Zsh reserves `USERNAME` for the shell identity. Other conflicting names stop the import before it writes the exports.
+
+1. Apply the dotfiles with `chezmoi apply`.
+2. Run `zsh -lic 'command -v claude && command -v node && git --version'`. Continue only if every command succeeds.
+3. Set the login shell with `chsh -s /bin/zsh` on macOS or `chsh -s /usr/bin/zsh` on Linux. This step can require your account password.
+4. Open a new terminal. Existing sessions keep their current shell.
+
+Session-only variables do not persist across a new login. Move any required session-only settings into your local zsh configuration before closing that session.
+
+After the last fish session closes, run `~/.local/bin/migrate-fish-history` again to import its saved commands. The importer keeps timestamps and multiline entries. It does not run stored commands or change their syntax. Fish-specific commands in history still require fish syntax when reused.
+
+The migration leaves the fish executable and its files available for open sessions and explicit fish scripts. New shells use zsh. Do not remove fish while those sessions or scripts still need it.
+
+### Shell checks
+
+The checks require Python, uv, chezmoi, fish, zsh, jq, fzf, mise, Starship, and the pinned plugins under `~/.config/zsh/plugins`. Install the plugins with `chezmoi apply --exclude=scripts ~/.config/zsh/plugins`.
+
+Run `uvx --with pytest pytest tests/integration` from the source directory. The first run requires network access to download the test runner. The checks use temporary homes and synthetic secrets. They do not read account credentials or change a login shell.
 
 ### Profiles (work / personal)
 
@@ -97,7 +116,7 @@ macOS upgrades chezmoi through the Brewfile. Linux installs it once at bootstrap
 ## Usage
 
 ```bash
-chezmoi edit ~/.config/fish/config.fish                     # Edit config
+chezmoi edit ~/.zshrc                     # Edit config
 chezmoi apply --force                                       # Apply locally (overwrites drifted files; required so run_after_ scripts always reach the tailscale self-heal)
 chezmoi cd && git add . && git commit -m "msg" && git push  # Push changes
 chezmoi update                                              # Pull on other machines
@@ -106,7 +125,7 @@ chezmoi update                                              # Pull on other mach
 ### Adding secrets
 
 1. Add to 1Password `Secrets` vault
-2. Update `dot_config/fish/conf.d/50-secrets.fish.tmpl`
+2. Update `dot_config/zsh/secrets.zsh.tmpl`
 3. Push and run `chezmoi update` on all machines
 
 ## Troubleshooting
