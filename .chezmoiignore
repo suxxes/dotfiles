@@ -1,5 +1,6 @@
 README.md
 LICENSE
+tests/
 .git
 
 # Session scratch file, never a dotfile target.

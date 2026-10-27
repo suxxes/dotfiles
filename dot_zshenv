@@ -1,0 +1,33 @@
+# Shared environment also applies to noninteractive SSH commands.
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_STATE_HOME="$HOME/.local/state"
+export EDITOR=nano VISUAL=nano
+export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=C
+export TERM=xterm-256color PYTHONWARNINGS=ignore
+export CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=1 CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1
+export DISABLE_BUG_COMMAND=1 DISABLE_COST_WARNINGS=1 DISABLE_DOCTOR_COMMAND=1
+export DISABLE_ERROR_REPORTING=1 DISABLE_INSTALL_GITHUB_APP_COMMAND=1
+export DISABLE_INTERLEAVED_THINKING=1 DISABLE_MIGRATE_INSTALLER_COMMAND=1
+export DISABLE_TELEMETRY=1 DISABLE_PROMPT_CACHING=0 ENABLE_PLUGINS=1
+if [[ $OSTYPE == darwin* ]]; then
+    zsh_brew_init="$(/opt/homebrew/bin/brew shellenv zsh)" || exit $?
+    eval "$zsh_brew_init" || exit $?
+    unset zsh_brew_init
+fi
+source "$XDG_CONFIG_HOME/zsh/shell-path.zsh" || exit $?
+if [[ -f "$XDG_CONFIG_HOME/zsh/local-env.zsh" ]]; then
+    source "$XDG_CONFIG_HOME/zsh/local-env.zsh" || exit $?
+fi
+source "$XDG_CONFIG_HOME/zsh/secrets.zsh" || exit $?
+source "$XDG_CONFIG_HOME/zsh/shell-functions.zsh" || exit $?
+
+# Apply runtime selection even when no interactive prompt is drawn.
+zsh_mise_init="$(command mise activate zsh)" || {
+    zsh_init_status=$?
+    print -u2 -- 'zsh mise activation failed'
+    exit $zsh_init_status
+}
+eval "$zsh_mise_init" || exit $?
+unset zsh_mise_init

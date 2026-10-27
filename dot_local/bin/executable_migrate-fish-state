@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Copy fish exports into private zsh files without changing the fish sources."""
+
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+
+def run_fish_export(script: str, env: dict[str, str], *args: str) -> bytes:
+    """Read fish output in memory so values never reach the terminal."""
+    result = subprocess.run(
+        ["fish", "-c", script, *args],
+        env=env,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode:
+        raise RuntimeError("Fish state export failed; no target file was written")
+    return result.stdout
+
+
+def read_shell_exports(data: bytes) -> dict[str, str]:
+    """Read the native NUL-separated environment without splitting values."""
+    return dict(
+        os.fsdecode(entry).split("=", 1) for entry in data.split(b"\0") if entry
+    )
+
+
+def write_shell_exports(target: Path, content: str) -> None:
+    """Create a private output file without replacing an existing file."""
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=target.parent) as temporary:
+        temporary.write(content.encode("utf-8", errors="surrogateescape"))
+        temporary.flush()
+        os.fsync(temporary.fileno())
+        os.link(temporary.name, target)
+
+
+def resolve_shell_export_names(names: list[str], config: Path) -> list[str]:
+    """Use the shared zsh name resolver before importing stored exports."""
+    result = subprocess.run(
+        ["zsh", "-df", str(config / "zsh/resolve-export-names.zsh"), *names],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError(result.stderr.strip())
+    resolved = result.stdout.splitlines()
+    if len(resolved) != len(names):
+        raise ValueError("Shell export name resolver returned an invalid count")
+    return resolved
+
+
+def quote_shell_exports(values: dict[str, str]) -> str:
+    """Quote each value for zsh and reject invalid environment names."""
+    lines = ["# Fish export migration, format version 1.\n"]
+    for name, value in values.items():
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError("Fish export name is not a shell identifier")
+        lines.append(f"export {name}={shlex.quote(value)}\n")
+    return "".join(lines)
+
+
+def migrate_fish_state() -> None:
+    """Import stored exports once; keep existing zsh files and fish sessions intact."""
+    home = Path.home()
+    config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+    variables = config / "fish/fish_variables"
+    secrets = config / "secrets/env.fish"
+    local_target = config / "zsh/local-env.zsh"
+    secret_target = config / "secrets/env.zsh"
+    if local_target.exists() and secret_target.exists():
+        return
+    if not variables.exists() and not secrets.exists():
+        return
+    with tempfile.TemporaryDirectory(prefix="fish-state-") as directory:
+        stage = Path(directory)
+        fish_config = stage / "fish"
+        fish_config.mkdir()
+        (fish_config / "config.fish").write_text("")
+        if variables.exists():
+            shutil.copyfile(variables, fish_config / "fish_variables")
+            (fish_config / "fish_variables").chmod(0o600)
+        env = {**os.environ, "XDG_CONFIG_HOME": str(stage)}
+        universal_names = (
+            run_fish_export("set --names --universal --export", env)
+            .decode()
+            .splitlines()
+        )
+        secret_names = []
+        if secrets.exists():
+            for line in secrets.read_text().splitlines():
+                match = re.match(r"^set -gx ([A-Za-z_][A-Za-z0-9_]*) ", line)
+                if match:
+                    secret_names.append(match[1])
+                elif line.strip() and not line.startswith("#"):
+                    raise ValueError(
+                        "Fish secrets format is not supported; original file is unchanged"
+                    )
+        resolved = resolve_shell_export_names(universal_names + secret_names, config)
+        pending = {}
+        if not local_target.exists():
+            exports = read_shell_exports(run_fish_export("/usr/bin/env -0", env))
+            content = quote_shell_exports(
+                {
+                    target: exports[name]
+                    for name, target in zip(
+                        universal_names, resolved[: len(universal_names)]
+                    )
+                    if name in exports
+                }
+            )
+            paths = run_fish_export('printf "%s\\0" $fish_user_paths', env).split(b"\0")
+            paths = [os.fsdecode(path) for path in paths if path]
+            if paths:
+                content += (
+                    "typeset -U path\npath=("
+                    + " ".join(map(shlex.quote, paths))
+                    + ' "$path[@]")\n'
+                )
+            pending[local_target] = content
+        if secrets.exists() and not secret_target.exists():
+            exports = read_shell_exports(
+                run_fish_export(
+                    'source "$argv[1]"; or exit; /usr/bin/env -0', env, str(secrets)
+                )
+            )
+            pending[secret_target] = quote_shell_exports(
+                {
+                    target: exports[name]
+                    for name, target in zip(
+                        secret_names, resolved[len(universal_names) :]
+                    )
+                }
+            )
+        for target, content in pending.items():
+            write_shell_exports(target, content)
+
+
+if __name__ == "__main__":
+    migrate_fish_state()

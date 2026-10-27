@@ -1,0 +1,69 @@
+# Interactive integrations never run for SSH command execution.
+[[ -o interactive ]] || return
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+setopt EXTENDED_HISTORY SHARE_HISTORY APPEND_HISTORY HIST_IGNORE_SPACE HIST_SAVE_NO_DUPS
+setopt AUTO_CD INTERACTIVE_COMMENTS
+bindkey -e
+zmodload zsh/terminfo
+
+if [[ $OSTYPE == darwin* ]]; then
+    fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
+    zsh_fzf_root=/opt/homebrew/opt/fzf/shell
+else
+    zsh_fzf_root=/usr/share/doc/fzf/examples
+fi
+zsh_plugin_root="$XDG_CONFIG_HOME/zsh/plugins"
+mkdir -p "$XDG_CACHE_HOME/zsh"
+autoload -Uz compinit add-zsh-hook split-shell-arguments
+compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
+
+source "$zsh_fzf_root/completion.zsh" || exit $?
+source "$zsh_fzf_root/key-bindings.zsh" || exit $?
+source "$XDG_CONFIG_HOME/zsh/fuzzy-widgets.zsh" || exit $?
+
+export STARSHIP_CONFIG="$XDG_CONFIG_HOME/starship.toml"
+zsh_starship_init="$(command starship init zsh)" || exit $?
+eval "$zsh_starship_init" || exit $?
+unset zsh_starship_init
+RPROMPT=''
+
+# Private history state is derived, not a separate user toggle.
+function zsh-prompt-context() {
+    if [[ -z $HISTFILE || $SAVEHIST -eq 0 ]]; then
+        export ZSH_HISTORY_DISABLED=1
+    else
+        unset ZSH_HISTORY_DISABLED
+    fi
+    [[ -t 1 ]] && print -Pn '\e]0;%~\a'
+    return 0
+}
+add-zsh-hook precmd zsh-prompt-context
+
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6c7086'
+typeset -A ZSH_HIGHLIGHT_STYLES=(
+    unknown-token 'fg=#f38ba8'
+    command 'fg=#a6e3a1'
+    builtin 'fg=#a6e3a1'
+    alias 'fg=#a6e3a1'
+    single-quoted-argument 'fg=#f9e2af'
+    double-quoted-argument 'fg=#f9e2af'
+)
+source "$zsh_plugin_root/zsh-autosuggestions/zsh-autosuggestions.zsh" || exit $?
+source "$zsh_plugin_root/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" || exit $?
+HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_FOUND='fg=#cdd6f4,bg=#45475a'
+HISTORY_SUBSTRING_SEARCH_HIGHLIGHT_NOT_FOUND='fg=#f38ba8,bg=#313244'
+source "$zsh_plugin_root/zsh-history-substring-search/zsh-history-substring-search.zsh" || exit $?
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+bindkey '^[OA' history-substring-search-up
+bindkey '^[OB' history-substring-search-down
+unset zsh_plugin_root zsh_fzf_root
+
+bindkey '^L' zsh-clear-screen
+zle -N zsh-clear-screen
+[[ -t 1 ]] && zsh-clear-screen
+return 0

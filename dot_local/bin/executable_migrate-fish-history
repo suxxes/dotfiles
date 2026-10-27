@@ -1,0 +1,336 @@
+#!/usr/bin/env python3
+"""Import saved fish history into ~/.zsh_history; never execute commands.
+
+No arguments. Honor XDG_DATA_HOME; keep the source. Rerun for late fish saves.
+Requires Python 3.10+, fish, and zsh.
+"""
+
+import fcntl
+import os
+import shutil
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+from collections import Counter
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
+from pathlib import Path
+from typing import BinaryIO
+
+FISH_EXPORT = """
+for index in (seq 1 $argv[1])
+    set -gx fish_history migration_$index
+    builtin history search --null --reverse --show-time='%s '
+    or exit 1
+end
+"""
+ZSH_EXPORT = r"""
+fc -p
+HISTSIZE=$2
+fc -R "$1" || exit
+print -s -- migration_reader_sentinel
+zmodload zsh/parameter || exit
+for event in ${(onk)history}; do
+    stamp=$(fc -ln -t '%s' "$event" "$event") || exit
+    print -rn -- "${stamp%% *}"$'\0'"${history[$event]}"$'\0'
+done
+"""
+ZSH_SERIALIZE = r"""
+fc -p
+HISTSIZE=1
+SAVEHIST=1
+setopt EXTENDED_HISTORY
+while IFS= read -r -d $'\0' entry; do
+    print -sr -- "$entry"
+    fc -W "$1" || exit
+    command cat -- "$1" || exit
+    print -rn -- $'\0'
+done
+"""
+
+
+def run_history_shell(
+    shell: str,
+    arguments: list[str],
+    workspace: Path,
+    data: bytes = b"",
+) -> bytes:
+    """Run a fixed history-only program with isolated shell state."""
+    executable = shutil.which(shell)
+    if executable is None:
+        raise RuntimeError(f"History migration requires {shell} on PATH")
+    environment = {
+        "HOME": str(workspace),
+        "XDG_DATA_HOME": str(workspace),
+        "XDG_CONFIG_HOME": str(workspace / "config"),
+        "XDG_CACHE_HOME": str(workspace / "cache"),
+        "XDG_STATE_HOME": str(workspace / "state"),
+        "ZDOTDIR": str(workspace / "config"),
+        "PATH": os.environ.get("PATH", os.defpath),
+        "LC_ALL": "C.UTF-8",
+    }
+    result = subprocess.run(
+        [executable, *arguments],
+        input=data,
+        capture_output=True,
+        env=environment,
+        cwd=workspace,
+        check=False,
+    )
+    if result.returncode or result.stderr:
+        # Shell diagnostics can contain history; report only process metadata.
+        raise RuntimeError(
+            f"History migration {shell} failed (exit {result.returncode}, "
+            f"{len(result.stderr)} diagnostic bytes)"
+        )
+    return result.stdout
+
+
+def read_fish_events(source: bytes, workspace: Path) -> list[tuple[int, bytes]]:
+    """Let fish decode each framed record so duplicate events are not filtered."""
+    if (
+        not source.startswith(b"- cmd: ")
+        or not source.endswith(b"\n")
+        or b"\0" in source
+    ):
+        raise ValueError(
+            "Fish history snapshot is incomplete or unsupported; retry after saving"
+        )
+    # Frame physical records only; fish owns escape decoding and metadata parsing.
+    records = [b"- cmd: " + record for record in source[7:].split(b"\n- cmd: ")]
+    directory = workspace / "fish"
+    directory.mkdir()
+    for index, record in enumerate(records, 1):
+        (directory / f"migration_{index}_history").write_bytes(record + b"\n")
+    output = run_history_shell(
+        "fish",
+        ["--no-config", "-c", FISH_EXPORT, str(len(records))],
+        workspace,
+    )
+    exported = output.split(b"\0")
+    if exported.pop() != b"" or len(exported) != len(records):
+        raise ValueError(
+            "Fish history export omitted records; source and zsh history are unchanged"
+        )
+    events = []
+    for record in exported:
+        timestamp, separator, command = record.partition(b" ")
+        if (
+            not separator
+            or not timestamp.isdigit()
+            or int(timestamp) <= 0
+            or not command
+        ):
+            raise ValueError(
+                "Fish history export has an invalid timestamp or empty command"
+            )
+        events.append((int(timestamp), command))
+    return events
+
+
+def read_zsh_events(history: bytes, workspace: Path) -> Counter[tuple[int, bytes]]:
+    """Read the existing zsh history identity through its native consumer."""
+    if not history:
+        return Counter()
+    snapshot = workspace / "existing-zsh-history"
+    snapshot.write_bytes(history)
+    output = run_history_shell(
+        "zsh",
+        [
+            "-df",
+            "-c",
+            ZSH_EXPORT,
+            "history-reader",
+            str(snapshot),
+            str(len(history) + 2),
+        ],
+        workspace,
+    )
+    fields = output.split(b"\0")
+    if fields.pop() != b"" or len(fields) % 2:
+        raise ValueError("Zsh history export has invalid record framing")
+    events: Counter[tuple[int, bytes]] = Counter()
+    for index in range(0, len(fields), 2):
+        timestamp, command = fields[index : index + 2]
+        if not timestamp.isdigit():
+            raise ValueError("Zsh history export has an invalid timestamp")
+        events[int(timestamp), command] += 1
+    return events
+
+
+def serialize_zsh_events(
+    events: list[tuple[int, bytes]], workspace: Path
+) -> list[bytes]:
+    """Let zsh encode multiline, trailing backslashes, and its special meta bytes."""
+    output = run_history_shell(
+        "zsh",
+        ["-dfi", "-c", ZSH_SERIALIZE, "history-writer", str(workspace / "serialized")],
+        workspace,
+        b"".join(command + b"\0" for _, command in events),
+    )
+    records = output.split(b"\0")
+    if records.pop() != b"" or len(records) != len(events):
+        raise ValueError("Zsh history serialization omitted records")
+    serialized = []
+    for (timestamp, _), record in zip(events, records):
+        header, separator, command = record.partition(b";")
+        if not header.startswith(b": ") or not separator or not command.endswith(b"\n"):
+            raise ValueError(
+                "Zsh history serialization has invalid extended history framing"
+            )
+        # Only substitute the epoch; the native serializer owns every command byte.
+        serialized.append(f": {timestamp}:0;".encode("ascii") + command)
+    return serialized
+
+
+def acquire_history_lock(lock: Path) -> os.stat_result:
+    """Recover only this helper's dead local lock, never a live or foreign lock."""
+    host = socket.gethostname()
+    target = f"/fish-to-zsh/v1/pid-{os.getpid()}/host-{host}"
+    try:
+        os.symlink(target, lock)
+    except FileExistsError:
+        ownership = lock.lstat()
+        if not stat.S_ISLNK(ownership.st_mode) or ownership.st_uid != os.getuid():
+            raise
+        owner = os.readlink(lock)
+        prefix, suffix = "/fish-to-zsh/v1/pid-", f"/host-{host}"
+        if not owner.startswith(prefix) or not owner.endswith(suffix):
+            raise
+        pid = owner[len(prefix) : -len(suffix)]
+        if not pid.isdigit() or int(pid) <= 0:
+            raise
+        try:
+            os.kill(int(pid), 0)
+        except ProcessLookupError:
+            current = lock.lstat()
+            if (current.st_dev, current.st_ino) != (ownership.st_dev, ownership.st_ino):
+                raise RuntimeError(
+                    "Zsh history lock changed during recovery; retry"
+                ) from None
+            lock.unlink()
+        else:
+            raise
+        os.symlink(target, lock)
+    return lock.lstat()
+
+
+@contextmanager
+def lock_zsh_history(
+    destination: Path,
+) -> Iterator[tuple[BinaryIO | None, os.stat_result]]:
+    """Respect zsh's default .LOCK and optional fcntl history locking protocols."""
+    lock = destination.with_name(destination.name + ".LOCK")
+    ownership = acquire_history_lock(lock)
+    try:
+        with ExitStack() as stack:
+            try:
+                descriptor = os.open(
+                    destination, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
+                )
+            except FileNotFoundError:
+                stream = None
+            else:
+                stream = stack.enter_context(os.fdopen(descriptor, "rb"))
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+                    raise ValueError(
+                        "Zsh history destination must be an owned regular file"
+                    )
+                fcntl.lockf(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            yield stream, ownership
+    finally:
+        if lock.is_symlink() and lock.lstat().st_ino == ownership.st_ino:
+            lock.unlink()
+
+
+def migrate_fish_history() -> int:
+    """Atomically append missing (epoch, command) occurrences; no ledger is needed."""
+    home = Path.home()
+    source = (
+        Path(os.environ.get("XDG_DATA_HOME") or home / ".local/share")
+        / "fish/fish_history"
+    )
+    try:
+        fish_history = source.read_bytes()
+    except FileNotFoundError:
+        return 0
+    if not fish_history:
+        return 0
+    destination = home / ".zsh_history"
+    with tempfile.TemporaryDirectory(prefix=".fish-to-zsh-", dir=home) as temporary:
+        workspace = Path(temporary)
+        fish_events = read_fish_events(fish_history, workspace)
+        serialized = serialize_zsh_events(fish_events, workspace)
+        with lock_zsh_history(destination) as (stream, ownership):
+            original = stream.read() if stream else b""
+            if original.endswith(b"\\\n"):
+                raise ValueError(
+                    "Zsh history ends in an incomplete continuation; refusing to append"
+                )
+            existing = read_zsh_events(original, workspace)
+            missing = []
+            for event, record in zip(fish_events, serialized):
+                if existing[event]:
+                    existing[event] -= 1
+                else:
+                    missing.append(record)
+            if not missing:
+                if stream:
+                    os.fchmod(stream.fileno(), 0o600)
+                return 0
+            prefix = original
+            if prefix and not prefix.endswith(b"\n"):
+                # A terminal backslash needs zsh's padding byte before the newline.
+                prefix += b" \n" if prefix.rstrip(b" ").endswith(b"\\") else b"\n"
+            replacement = workspace / "replacement"
+            with replacement.open("wb") as output:
+                output.write(prefix)
+                output.writelines(missing)
+                output.flush()
+                os.fsync(output.fileno())
+            lock = destination.with_name(destination.name + ".LOCK")
+            if not lock.is_symlink() or lock.lstat().st_ino != ownership.st_ino:
+                raise RuntimeError("Zsh history lock changed during migration; retry")
+            try:
+                current = destination.lstat()
+            except FileNotFoundError:
+                if stream:
+                    raise RuntimeError(
+                        "Zsh history disappeared during migration; retry"
+                    ) from None
+            else:
+                if stream is None or current != os.fstat(stream.fileno()):
+                    raise RuntimeError("Zsh history changed during migration; retry")
+                if os.pread(stream.fileno(), len(original) + 1, 0) != original:
+                    raise RuntimeError(
+                        "Zsh history contents changed during migration; retry"
+                    )
+            os.replace(replacement, destination)
+            directory = os.open(home, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+            return len(missing)
+
+
+def main() -> int:
+    """Report counts or metadata-only errors, never history contents."""
+    os.umask(0o077)
+    if len(sys.argv) != 1:
+        print("Usage: migrate-fish-history", file=sys.stderr)
+        return 2
+    try:
+        imported = migrate_fish_history()
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"Fish history migration failed: {error}", file=sys.stderr)
+        return 1
+    print(f"Imported {imported} fish history events into ~/.zsh_history")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
