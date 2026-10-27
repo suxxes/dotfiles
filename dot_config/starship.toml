@@ -5,6 +5,11 @@ right_format = ''
 
 [palettes.mocha]
 base = '#1e1e2e'
+mantle = '#181825'
+surface0 = '#313244'
+surface2 = '#585b70'
+flamingo = '#f2cdcd'
+sky = '#89dceb'
 text = '#cdd6f4'
 blue = '#89b4fa'
 green = '#a6e3a1'
@@ -16,54 +21,56 @@ lavender = '#b4befe'
 
 [hostname]
 ssh_only = false
-format = '[$hostname ]($style)'
-style = 'lavender'
+format = '[ $hostname ]($style)'
+style = 'fg:yellow bg:surface2'
 
 [directory]
 truncation_length = 0
 truncate_to_repo = false
-format = '[$path]($style)[$read_only]($read_only_style) '
-style = 'blue'
+format = '[ $path]($style)[$read_only]($read_only_style)[ ]($style)'
+repo_root_format = '[ $before_root_path]($style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style)[ ]($style)'
+repo_root_style = 'bold fg:text bg:surface0'
+style = 'fg:text bg:surface0'
 read_only = ' '
-read_only_style = 'red'
+read_only_style = 'fg:mauve bg:surface0'
 
 [git_branch]
-format = '[$symbol$branch ]($style)'
+format = '[ $symbol$branch ]($style)'
 symbol = ' '
-style = 'mauve'
+style = 'fg:mantle bg:green'
 
 [git_commit]
 only_detached = true
-format = '[$hash$tag ]($style)'
-style = 'mauve'
+format = '[ $hash$tag ]($style)'
+style = 'fg:mantle bg:green'
 tag_disabled = false
 
 [git_state]
-format = '[\($state( $progress_current/$progress_total)\) ]($style)'
-style = 'yellow'
+format = '[ \($state( $progress_current/$progress_total)\) ]($style)'
+style = 'fg:mantle bg:yellow'
 
 [git_status]
-format = '([$all_status$ahead_behind]($style) )'
-style = 'peach'
+format = '([$all_status$ahead_behind]($style))'
+style = 'fg:mantle bg:green'
 untracked = ''
-modified = ''
-staged = ''
-stashed = ''
-ahead = '+'
-behind = '-'
-diverged = '±'
+modified = '[  ](fg:mantle bg:red)'
+staged = '[  ](fg:mantle bg:yellow)'
+stashed = '  '
+ahead = ' + '
+behind = ' - '
+diverged = ' ± '
 
 [status]
 disabled = false
-format = '[$symbol ]($style)'
+format = '[ $symbol ]($style)'
 symbol = '!'
-style = 'red'
+style = 'bold fg:red bg:surface2'
 map_symbol = false
 
 [jobs]
-format = '[$symbol ]($style)'
+format = '[ $symbol ]($style)'
 symbol = '%'
-style = 'yellow'
+style = 'bold fg:peach bg:surface2'
 
 [character]
 success_symbol = ''
@@ -74,10 +81,10 @@ detect_extensions = []
 detect_files = []
 detect_folders = []
 detect_variables = ['PATH']
-format = '[$symbol$version ]($style)'
+format = '[ $symbol$version ]($style)'
 version_format = '${raw}'
 symbol = ' '
-style = 'red'
+style = 'bold fg:mantle bg:red'
 
 [python]
 detect_extensions = []
@@ -85,57 +92,57 @@ detect_files = []
 detect_folders = []
 detect_env_vars = ['PATH']
 python_binary = ['python']
-format = '[$symbol$version ]($style)'
+format = '[ $symbol$version ]($style)'
 version_format = '${raw}'
 symbol = ' '
-style = 'yellow'
+style = 'bold fg:mantle bg:peach'
 
 [golang]
-format = '[$symbol$version ]($style)'
+format = '[ $symbol$version ]($style)'
 version_format = '${raw}'
 symbol = ' '
-style = 'green'
-not_capable_style = 'red'
+style = 'bold fg:mantle bg:sky'
+not_capable_style = 'bold fg:mantle bg:red'
 
 [nix_shell]
-format = '[$symbol$state( \($name\)) ]($style)'
+format = '[ $symbol$state( \($name\)) ]($style)'
 symbol = ' '
-style = 'blue'
+style = 'bold fg:mantle bg:sky'
 
 [env_var.STY]
-format = '[$env_value ]($style)'
-style = 'mauve'
+format = '[ $env_value ]($style)'
+style = 'bold fg:mantle bg:green'
 
 [env_var.DOCKER_MACHINE_NAME]
-format = '[$env_value ]($style)'
-style = 'blue'
+format = '[ $env_value ]($style)'
+style = 'bold fg:text bg:surface2'
 
 [env_var.DESK_ENV]
-format = '[$env_value ]($style)'
-style = 'green'
+format = '[ $env_value ]($style)'
+style = 'bold fg:mantle bg:peach'
 
 [env_var.VIRTUALGO]
-format = '[ $env_value ]($style)'
-style = 'green'
+format = '[  $env_value ]($style)'
+style = 'bold fg:mantle bg:sky'
 
 [custom.node]
 command = 'node --version | cut -c 2-'
 when = 'command -v node >/dev/null 2>&1'
 shell = ['zsh', '-f']
-format = '[$symbol$output ]($style)'
+format = '[ $symbol$output ]($style)'
 symbol = ' '
-style = 'green'
+style = 'bold fg:mantle bg:green'
 
 [custom.root]
 when = 'test "$(id -u)" -eq 0'
 command = 'printf "$"'
 shell = ['zsh', '-f']
-format = '[$output ]($style)'
-style = 'red'
+format = '[ $output ]($style)'
+style = 'bold fg:green bg:surface2'
 
 [custom.private]
 when = 'test "${ZSH_HISTORY_DISABLED-}" = 1'
 command = 'printf "private"'
 shell = ['zsh', '-f']
-format = '[ $output ]($style)'
-style = 'mauve'
+format = '[  $output ]($style)'
+style = 'fg:flamingo bg:surface2'
