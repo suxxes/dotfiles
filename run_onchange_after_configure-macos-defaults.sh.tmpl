@@ -135,6 +135,10 @@ if pmset -g custom 2>/dev/null | grep -q "^Battery Power:"; then
         echo "WARNING: sudo required for pmset lessbright (skipped)" >&2
 fi
 
+# Never sleep, including with the lid closed on battery. Shows as SleepDisabled.
+sudo pmset -a disablesleep 1 || \
+    echo "WARNING: sudo required for pmset disablesleep (skipped)" >&2
+
 # ---- Reload affected services -----------------------------------------
 killall Dock 2>/dev/null || true
 killall Finder 2>/dev/null || true
