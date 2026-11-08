@@ -13,7 +13,7 @@ CRUST_TOOL = "github:suxxes/crust"
 
 
 def write_spy_tool(bin_dir: Path, name: str, output: str = "") -> None:
-    """Record argv and MISE_DISABLE_TOOLS for each call, then print canned output."""
+    """Record argv and the env switches under test for each call, then print output."""
     spy = bin_dir / name
     spy.write_text(
         f"#!{sys.executable} -I\n"
@@ -21,7 +21,8 @@ def write_spy_tool(bin_dir: Path, name: str, output: str = "") -> None:
         "from pathlib import Path\n"
         "with Path(os.environ['CRUST_TEST_CALLS']).open('a') as log:\n"
         f"    log.write(json.dumps({{'argv': [{name!r}, *sys.argv[1:]],"
-        " 'disabled': os.environ.get('MISE_DISABLE_TOOLS')}) + '\\n')\n"
+        " 'disabled': os.environ.get('MISE_DISABLE_TOOLS'),"
+        " 'no_autoremove': os.environ.get('HOMEBREW_NO_AUTOREMOVE')}) + '\\n')\n"
         f"print({output!r}, end='')\n"
     )
     spy.chmod(0o700)
@@ -146,11 +147,12 @@ def test_cleanup_removes_pre_mise_crust_copies(crust_home: Path, os_type: str) -
     assert result.returncode == 0, result.stderr
     assert not old_binary.exists()
     assert not stamp.parent.exists()
-    brew_calls = [c["argv"] for c in calls if c["argv"][0] == "brew"]
+    brew_calls = [c for c in calls if c["argv"][0] == "brew"]
     if os_type == "darwin":
-        assert brew_calls == [
-            ["brew", "list", "--formula", "suxxes/tap/crust"],
-            ["brew", "uninstall", "suxxes/tap/crust"],
+        # Every installed version goes, and autoremove must not take unrelated formulae.
+        assert [(c["argv"], c["no_autoremove"]) for c in brew_calls] == [
+            (["brew", "list", "--formula", "suxxes/tap/crust"], None),
+            (["brew", "uninstall", "--force", "suxxes/tap/crust"], "1"),
         ]
     else:
         assert brew_calls == []
