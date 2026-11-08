@@ -66,6 +66,10 @@ fi
 
 # Runtimes and cross-platform CLIs: everything listed in ~/.config/mise/config.toml.
 echo "==> Installing mise tools"
+# A fresh host has no token until generate-secrets runs; install-crust adds crust on a later apply.
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+    export MISE_DISABLE_TOOLS="github:suxxes/crust"
+fi
 mise install --yes
 
 # Note: Claude credentials sync is handled by bind mount in cloud-init
