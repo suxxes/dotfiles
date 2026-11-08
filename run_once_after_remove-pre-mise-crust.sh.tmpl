@@ -1,0 +1,25 @@
+#!/bin/bash
+# chezmoi:template:left-delimiter="# {{" right-delimiter="}}"
+# Removes the crust copies from before mise owned it. Runs once per host.
+
+set -e
+
+# {{ if eq .chezmoi.hostname "usakura" }}
+exit 0
+# {{ end }}
+
+# {{ if eq .osType "darwin" }}
+if brew list --formula suxxes/tap/crust &> /dev/null; then
+    echo "==> Removing Homebrew crust"
+    brew uninstall suxxes/tap/crust
+fi
+# {{ end }}
+
+# The Linux release installer's binary and stamp, or a hand-copied build on macOS.
+if [ -e "$HOME/.local/bin/crust" ]; then
+    echo "==> Removing ~/.local/bin/crust"
+    rm "$HOME/.local/bin/crust"
+fi
+if [ -d "$HOME/.local/share/crust" ]; then
+    rm -r "$HOME/.local/share/crust"
+fi
