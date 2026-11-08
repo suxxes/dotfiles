@@ -21,6 +21,9 @@
 {{-   fail (printf "unknown profile %q; use work, personal, or default" $profile) -}}
 {{- end -}}
 
+# Fixed so file modes don't depend on the umask of whichever shell runs chezmoi.
+umask = 0o022
+
 [data]
   osType = {{ .chezmoi.os | quote }}
   profile = {{ $profile | quote }}
