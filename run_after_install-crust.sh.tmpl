@@ -11,13 +11,50 @@ echo "==> usakura host: skipping crust"
 exit 0
 # {{ end }}
 
-if [ -z "${GITHUB_TOKEN:-}" ]; then
+set +x
+crust_token=${GITHUB_TOKEN:-}
+secrets_file="$HOME/.config/secrets/env.zsh"
+if [ -z "$crust_token" ] && [ -f "$secrets_file" ]; then
+    # Load generated exports in a separate shell. Return only the token on a private pipe.
+    if ! IFS= read -r -d '' crust_token < <(
+        zsh -dfc 'source "$1" && print -rN -u 3 -- "${GITHUB_TOKEN:-}"' \
+            crust-secrets "$secrets_file" 3>&1 >/dev/null 2>&1
+    ); then
+        echo "ERROR: crust could not load the generated GitHub credential" >&2
+        exit 1
+    fi
+fi
+if [ -z "$crust_token" ]; then
     echo "==> crust: GITHUB_TOKEN is not set; cannot reach the private release. Skipping."
     exit 0
 fi
 
-# mise owns the binary; put its shims on PATH for a fresh host whose shell never activated mise.
-eval "$(mise activate bash --shims)"
-
+# Linux bootstrap can install mise in ~/.local/bin before the calling shell adds it to PATH.
+export PATH="$PATH:$HOME/.local/bin"
 # upgrade also installs crust when it is missing. A running session keeps its old binary.
-mise upgrade --yes github:suxxes/crust
+GITHUB_TOKEN="$crust_token" mise upgrade --yes github:suxxes/crust
+
+# Keep the previous binary until the private backend provides an executable.
+# This check runs on later applies too, so a skip never consumes cleanup.
+if [ "$(mise which --plugin crust 2>/dev/null)" != "github:suxxes/crust" ] ||
+    ! crust_bin=$(mise which crust 2>/dev/null) ||
+    [ ! -f "$crust_bin" ] || [ ! -x "$crust_bin" ]; then
+    exit 0
+fi
+
+# {{ if eq .osType "darwin" }}
+if brew list --formula suxxes/tap/crust &>/dev/null; then
+    echo "==> Removing Homebrew crust"
+    # --force drops every installed version; autoremove would take formulae nothing pins.
+    HOMEBREW_NO_AUTOREMOVE=1 brew uninstall --force suxxes/tap/crust
+fi
+# {{ end }}
+
+# The Linux release installer's binary and stamp, or a hand-copied build on macOS.
+if [ -e "$HOME/.local/bin/crust" ]; then
+    echo "==> Removing ~/.local/bin/crust"
+    rm "$HOME/.local/bin/crust"
+fi
+if [ -d "$HOME/.local/share/crust" ]; then
+    rm -r "$HOME/.local/share/crust"
+fi
