@@ -3,10 +3,11 @@
 
 set -e
 
-# mise owns the binary; put its shims on PATH for a fresh host whose shell never activated mise.
+# The Linux package hook installs mise in ~/.local/bin without changing this hook's PATH.
+export PATH="$PATH:$HOME/.local/bin"
 eval "$(mise activate bash --shims)"
 
-if command -v rtk &> /dev/null; then
+if command -v rtk &>/dev/null; then
     echo "==> Initializing rtk global integrations"
     rtk init --global --codex
     rtk init --global --agent claude --auto-patch --trust-filters
