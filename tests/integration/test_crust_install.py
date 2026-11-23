@@ -248,6 +248,25 @@ def test_apply_preserves_legacy_crust_without_token_then_retries_cleanup(
         assert brew_calls == []
 
 
+def test_cleanup_preserves_unrelated_files_on_later_applies(crust_home: Path) -> None:
+    old_binary, stamp = seed_legacy_crust(crust_home)
+    unrelated = stamp.parent / "unrelated.txt"
+    unrelated.write_text("keep this file\n")
+
+    result, _ = apply_crust_scripts(
+        crust_home, "linux", token=FAKE_TOKEN, install="success"
+    )
+    assert result.returncode == 0, result.stderr
+    assert not old_binary.exists()
+    assert not stamp.exists()
+    assert unrelated.is_file()
+    assert unrelated.read_text() == "keep this file\n"
+
+    result, _ = apply_crust_scripts(crust_home, "linux", token=FAKE_TOKEN)
+    assert result.returncode == 0, result.stderr
+    assert unrelated.read_text() == "keep this file\n"
+
+
 def test_failed_upgrade_preserves_legacy_crust(crust_home: Path) -> None:
     old_binary, stamp = seed_legacy_crust(crust_home)
     result, _ = apply_crust_scripts(crust_home, "linux", token=FAKE_TOKEN, install="fail")
@@ -270,6 +289,9 @@ def test_upgrade_without_usable_binary_preserves_legacy_crust(
     assert result.returncode == 0, result.stderr
     assert old_binary.is_file()
     assert stamp.is_file()
+    assert "mise did not provide an executable crust" in result.stderr
+    assert "mise which crust --plugin" in result.stderr
+    assert FAKE_TOKEN not in result.stderr
 
 
 def test_excluded_host_leaves_legacy_crust_untouched(crust_home: Path) -> None:

@@ -39,6 +39,8 @@ GITHUB_TOKEN="$crust_token" mise upgrade --yes github:suxxes/crust
 if [ "$(mise which --plugin crust 2>/dev/null)" != "github:suxxes/crust" ] ||
     ! crust_bin=$(mise which crust 2>/dev/null) ||
     [ ! -f "$crust_bin" ] || [ ! -x "$crust_bin" ]; then
+    printf '%s\n' 'WARNING: mise did not provide an executable crust; skipping legacy cleanup.' \
+        'Check the active backend with: mise which crust --plugin' >&2
     exit 0
 fi
 
@@ -55,6 +57,9 @@ if [ -e "$HOME/.local/bin/crust" ]; then
     echo "==> Removing ~/.local/bin/crust"
     rm "$HOME/.local/bin/crust"
 fi
-if [ -d "$HOME/.local/share/crust" ]; then
-    rm -r "$HOME/.local/share/crust"
+legacy_crust_dir="$HOME/.local/share/crust"
+if [ -d "$legacy_crust_dir" ] && [ ! -L "$legacy_crust_dir" ]; then
+    rm -f "$legacy_crust_dir/release-tag"
+    # Leave the directory in place if it contains anything else.
+    rmdir "$legacy_crust_dir" 2>/dev/null || :
 fi
